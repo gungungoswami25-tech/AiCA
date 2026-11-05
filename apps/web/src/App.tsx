@@ -1,6 +1,8 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { TopHeader } from './components/TopHeader';
 import { HeroLandingPage } from './pages/HeroLandingPage';
 import { ProblemListPage } from './pages/ProblemListPage';
 import { WorkspacePage } from './pages/WorkspacePage';
@@ -11,7 +13,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { AlgorithmsPage } from './pages/AlgorithmsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { useAuthStore } from './store/useAuthStore';
-import { Sparkles, ArrowRight, Cpu, ArrowLeftRight } from 'lucide-react';
+import { Sparkles, ArrowRight, Cpu, ArrowLeftRight, Menu } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
@@ -27,13 +29,28 @@ function HomeRoute() {
   return <HeroLandingPage />;
 }
 
-export default function App() {
+function AppLayout() {
+  const location = useLocation();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // Exclude sidebar from authentication screens (login and register)
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-[#FAFAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-100 dark:selection:bg-emerald-900 selection:text-emerald-950 dark:selection:text-emerald-100 font-sans transition-colors duration-200">
-          <Navbar />
-          <main className="flex-1 flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#FAFAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-100 dark:selection:bg-emerald-900 selection:text-emerald-950 dark:selection:text-emerald-100 font-sans transition-colors duration-200">
+      {/* Top Utility Header Bar with Profile & Logout dropdown */}
+      {!isAuthPage && (
+        <TopHeader onOpenMobileSidebar={() => setMobileSidebarOpen(true)} />
+      )}
+
+      <div className="flex-1 flex relative">
+        {!isAuthPage && (
+          <Sidebar
+            mobileOpen={mobileSidebarOpen}
+            onCloseMobile={() => setMobileSidebarOpen(false)}
+          />
+        )}
+        <div className={`flex-1 flex flex-col min-w-0 transition-[padding] duration-300 ${!isAuthPage ? 'md:pl-16' : ''}`}>
+          <main className="flex-1 flex flex-col min-w-0">
             <Routes>
               <Route path="/" element={<HomeRoute />} />
               <Route path="/problems" element={<ProblemListPage />} />
@@ -72,6 +89,16 @@ export default function App() {
             </div>
           </footer>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <BrowserRouter>
+        <AppLayout />
       </BrowserRouter>
     </GoogleOAuthProvider>
   );
