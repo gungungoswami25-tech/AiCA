@@ -35,7 +35,7 @@ export function startProblemValidationWorker(): Worker {
       console.log(`[ProblemValidationWorker] Initiating differential validation for proposal ${proposalId}`);
 
       const db = mongoose.connection;
-      const proposalsCol = db.collection('problem_proposals');
+      const proposalsCol = db.collection('problemproposals');
 
       try {
         await proposalsCol.updateOne(
