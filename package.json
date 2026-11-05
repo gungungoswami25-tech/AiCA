@@ -6,6 +6,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "seed": "pnpm --filter @aica/api seed",
     "lint": "turbo run lint",
     "test": "vitest run",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
