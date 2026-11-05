@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Search, ArrowRight, Tag } from 'lucide-react';
+import { BookOpen, Search, ArrowRight, Tag, Sparkles } from 'lucide-react';
 import { ProblemListItem, ProblemDifficulty } from '@aica/shared';
 import { api } from '../services/api';
 
