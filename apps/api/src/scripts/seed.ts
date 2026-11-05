@@ -7,7 +7,7 @@ import { LANGUAGE_CONFIGS } from '@aica/shared';
 
 dotenv.config();
 
-export async function runSeed() {
+export async function runSeed(disconnectMongoose = true) {
   console.log('[Seed] Starting database seeding for PostgreSQL & MongoDB...');
 
   // 1. Seed PostgreSQL Users
@@ -281,7 +281,9 @@ Return *the maximum amount of water a container can store*.`,
     }
 
     console.log('[Seed] MongoDB problem catalog seeded successfully with 3 comprehensive problems.');
-    await mongoose.disconnect();
+    if (disconnectMongoose) {
+      await mongoose.disconnect();
+    }
   } catch (err: any) {
     console.warn('[Seed] MongoDB seed deferred/offline:', err.message);
   }

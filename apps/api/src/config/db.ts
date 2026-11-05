@@ -2,14 +2,9 @@ import pg from 'pg';
 import mongoose from 'mongoose';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { POSTGRES_SCHEMA_SQL } from '../models/postgres/schema.js';
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // PostgreSQL Connection Pool
 const { Pool } = pg;
@@ -57,15 +52,10 @@ export async function initializeDatabases(): Promise<void> {
   // 1. Connect to PostgreSQL and apply migrations
   try {
     const client = await pgPool.connect();
-    console.log('[PostgreSQL] Connected successfully to aica_lab database.');
+    console.log('[PostgreSQL] Connected successfully to database.');
     
-    // Read and run schema.sql
-    const schemaPath = path.resolve(__dirname, '../models/postgres/schema.sql');
-    if (fs.existsSync(schemaPath)) {
-      const sql = fs.readFileSync(schemaPath, 'utf8');
-      await client.query(sql);
-      console.log('[PostgreSQL] Database migrations verified and applied.');
-    }
+    await client.query(POSTGRES_SCHEMA_SQL);
+    console.log('[PostgreSQL] Database migrations verified and applied.');
     client.release();
   } catch (err: any) {
     console.warn('[PostgreSQL] Warning: Connection deferred or offline:', err.message);
@@ -78,6 +68,19 @@ export async function initializeDatabases(): Promise<void> {
       serverSelectionTimeoutMS: 5000
     });
     console.log('[MongoDB] Connected successfully to Mongoose store.');
+
+    // Auto-seed problem catalog if empty
+    try {
+      const { ProblemModel } = await import('../models/mongodb/problem.model.js');
+      const count = await ProblemModel.countDocuments();
+      if (count === 0) {
+        console.log('[AutoSeed] Problem catalog is empty. Auto-seeding default benchmark problems...');
+        const { runSeed } = await import('../scripts/seed.js');
+        await runSeed(false);
+      }
+    } catch (seedErr: any) {
+      console.warn('[AutoSeed] Auto-seed warning:', seedErr.message);
+    }
   } catch (err: any) {
     console.warn('[MongoDB] Warning: Connection deferred or offline:', err.message);
   }
@@ -86,7 +89,7 @@ export async function initializeDatabases(): Promise<void> {
   try {
     await redisClient.connect();
     await redisSubscriber.connect();
-    console.log('[Redis] Connected successfully to Redis 7.2 broker.');
+    console.log('[Redis] Connected successfully to Redis broker.');
   } catch (err: any) {
     console.warn('[Redis] Warning: Redis connection deferred or offline:', err.message);
   }
