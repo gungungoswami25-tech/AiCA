@@ -52,6 +52,7 @@ export async function createProposal(req: Request, res: Response): Promise<void>
       res.status(200).json(
         createSuccessResponse(
           {
+            id: existing._id.toString(),
             proposalId: existing._id.toString(),
             status: existing.status,
             idempotentReplay: true
@@ -95,6 +96,7 @@ export async function createProposal(req: Request, res: Response): Promise<void>
     res.status(202).json(
       createSuccessResponse(
         {
+          id: proposalId,
           proposalId,
           status: 'QUEUED_FOR_GENERATION',
           estimatedWaitSeconds: 20
@@ -109,7 +111,13 @@ export async function createProposal(req: Request, res: Response): Promise<void>
 }
 
 export async function getProposalById(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json(createErrorResponse('VALIDATION_ERROR', `Invalid proposal ID format: "${id}"`));
+    return;
+  }
 
   try {
     const proposal = await ProblemProposalModel.findById(id).lean();
@@ -145,7 +153,14 @@ export async function getProposalById(req: Request, res: Response): Promise<void
 }
 
 export async function clarifyProposal(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json(createErrorResponse('VALIDATION_ERROR', `Invalid proposal ID format: "${id}"`));
+    return;
+  }
+
   const parseResult = ProblemProposalClarifySchema.safeParse(req.body);
 
   if (!parseResult.success) {
@@ -236,7 +251,14 @@ export async function listAdminProposals(req: Request, res: Response): Promise<v
 }
 
 export async function approveProposal(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json(createErrorResponse('VALIDATION_ERROR', `Invalid proposal ID format: "${id}"`));
+    return;
+  }
+
   const parseResult = AdminProposalApproveSchema.safeParse(req.body);
   const decisionNotes = parseResult.success ? parseResult.data.decisionNotes : undefined;
   const adminUserId = req.user?.id || 'admin';
@@ -340,7 +362,14 @@ export async function approveProposal(req: Request, res: Response): Promise<void
 }
 
 export async function rejectProposal(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json(createErrorResponse('VALIDATION_ERROR', `Invalid proposal ID format: "${id}"`));
+    return;
+  }
+
   const parseResult = AdminProposalRejectSchema.safeParse(req.body);
 
   if (!parseResult.success) {

@@ -63,6 +63,8 @@ export function CreateProblemPage() {
   // Polling for proposal status updates
   useEffect(() => {
     if (!activeProposal) return;
+    const proposalId = activeProposal.id || (activeProposal as any).proposalId;
+    if (!proposalId || proposalId === 'undefined') return;
 
     const terminalStatuses: ProposalStatus[] = [
       'AWAITING_CLARIFICATION',
@@ -72,11 +74,14 @@ export function CreateProblemPage() {
       'VALIDATION_FAILED'
     ];
 
+    let failureCount = 0;
+
     const poll = async () => {
       try {
-        const res = await api.get(`/problem-proposals/${activeProposal.id}`);
+        const res = await api.get(`/problem-proposals/${proposalId}`);
         const updated: ProblemProposal = res.data.data;
         setActiveProposal(updated);
+        failureCount = 0; // reset on success
 
         // Pre-fill existing answers if in clarification state
         if (updated.status === 'AWAITING_CLARIFICATION' && updated.clarifications) {
@@ -94,7 +99,15 @@ export function CreateProblemPage() {
           }
         }
       } catch (err: any) {
-        console.error('Polling error:', err);
+        failureCount++;
+        console.warn(`[Polling] Attempt ${failureCount} failed:`, err.message);
+        if (failureCount >= 6) {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          setError('Lost connection while tracking problem evaluation. Please refresh to check status.');
+        }
       }
     };
 
@@ -109,7 +122,7 @@ export function CreateProblemPage() {
         pollIntervalRef.current = null;
       }
     };
-  }, [activeProposal?.id, activeProposal?.status]);
+  }, [activeProposal?.id, (activeProposal as any)?.proposalId, activeProposal?.status]);
 
   const handleSubmitPrompt = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +136,12 @@ export function CreateProblemPage() {
 
     try {
       const res = await api.post('/problem-proposals', { prompt: prompt.trim() });
-      setActiveProposal(res.data.data);
+      const proposalPayload = res.data.data;
+      const effectiveId = proposalPayload.id || proposalPayload.proposalId;
+      setActiveProposal({
+        ...proposalPayload,
+        id: effectiveId
+      });
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to submit problem idea. Please try again.');
     } finally {
@@ -140,14 +158,24 @@ export function CreateProblemPage() {
       return;
     }
 
+    const proposalId = activeProposal.id || (activeProposal as any).proposalId;
+    if (!proposalId || proposalId === 'undefined') {
+      setError('Invalid proposal reference. Please refresh and try again.');
+      return;
+    }
+
     setIsSubmittingClarification(true);
     setError(null);
 
     try {
-      const res = await api.post(`/problem-proposals/${activeProposal.id}/clarify`, {
+      const res = await api.post(`/problem-proposals/${proposalId}/clarify`, {
         answers: clarificationAnswers
       });
-      setActiveProposal(res.data.data);
+      const proposalPayload = res.data.data;
+      setActiveProposal({
+        ...proposalPayload,
+        id: proposalPayload.id || proposalPayload.proposalId || proposalId
+      });
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to submit answers.');
     } finally {
