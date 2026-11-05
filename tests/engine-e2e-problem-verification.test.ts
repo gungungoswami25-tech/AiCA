@@ -172,7 +172,7 @@ describe('E2E Engine Problem Verification & Execution Pipeline', () => {
         memoryLimitKb: 262144
       });
 
-      expect(result.verdict).toBe('ACCEPTED');
+      expect(result.verdict).toBe('EXECUTED');
       expect(result.stdout.trim()).toBe('true');
       expect(result.isError).toBe(false);
       expect(result.executionTimeMs).toBe(35);
