@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Code2, Trophy, BarChart2, BookOpen, LogOut, User as UserIcon } from 'lucide-react';
+import { Code2, Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Navbar() {
@@ -35,6 +35,13 @@ export function Navbar() {
           >
             <BookOpen className="w-4 h-4 text-indigo-400" />
             Problems
+          </Link>
+          <Link
+            to="/algorithms"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition"
+          >
+            <Workflow className="w-4 h-4 text-purple-400" />
+            Algorithms
           </Link>
           <Link
             to="/leaderboard"

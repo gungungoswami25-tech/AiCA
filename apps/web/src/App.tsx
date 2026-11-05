@@ -6,6 +6,7 @@ import { LeaderboardPage } from './pages/LeaderboardPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { AlgorithmsPage } from './pages/AlgorithmsPage';
 import { Sparkles, ArrowRight, ShieldCheck, Cpu, ArrowLeftRight } from 'lucide-react';
 
 function LandingPage() {
@@ -89,6 +90,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/problems" element={<ProblemListPage />} />
+            <Route path="/algorithms" element={<AlgorithmsPage />} />
             <Route path="/workspace/:id" element={<WorkspacePage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
