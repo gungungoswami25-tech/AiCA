@@ -11,7 +11,6 @@ import {
   LogIn,
   Sun,
   Moon,
-  Sparkles,
   ChevronRight,
   Settings,
   X,
@@ -23,9 +22,6 @@ interface NavItem {
   label: string;
   path: string;
   icon: React.ComponentType<{ className?: string }>;
-  description?: string;
-  badge?: string;
-  badgeColor?: string;
   requiresAuth?: boolean;
 }
 
@@ -46,51 +42,42 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const { user, profile, isAuthenticated, logout } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
 
+  // Clean, minimal navigation items (no subtitles, no extra badges)
   const navItems: NavItem[] = [
     {
       label: 'Dashboard',
       path: '/dashboard',
       icon: LayoutDashboard,
-      description: 'Personal overview & stats',
       requiresAuth: false,
     },
     {
       label: 'Problems',
       path: '/problems',
       icon: BookOpen,
-      description: 'Curated coding catalog',
-      badge: 'Catalog',
-      badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+      requiresAuth: false,
     },
     {
       label: 'Algorithms',
       path: '/algorithms',
       icon: Workflow,
-      description: 'Visualizer & patterns',
-      badge: 'Visualizer',
-      badgeColor: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20',
+      requiresAuth: false,
     },
     {
       label: 'Code Lab',
       path: '/workspace/1',
       icon: Terminal,
-      description: 'Interactive IDE sandbox',
-      badge: 'IDE',
-      badgeColor: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
+      requiresAuth: false,
     },
     {
       label: 'Leaderboard',
       path: '/leaderboard',
       icon: Trophy,
-      description: 'Global rankings & elo',
-      badge: 'Rankings',
-      badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+      requiresAuth: false,
     },
     {
       label: 'Profile',
       path: '/profile',
       icon: UserIcon,
-      description: 'Activity & badges',
       requiresAuth: true,
     },
   ];
@@ -162,9 +149,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
         ref={sidebarRef}
         aria-label="Application Navigation Sidebar"
         onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => {
-          setIsHovered(false);
-        }}
+        onMouseLeave={() => setIsHovered(false)}
         onFocus={() => setIsHovered(true)}
         onBlur={(e) => {
           if (!sidebarRef.current?.contains(e.relatedTarget as Node)) {
@@ -180,18 +165,18 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                 : 'w-16 shadow-xs')
         }`}
       >
-        {/* Top Section: Navigation Links */}
-        <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pt-2">
-          {/* Mobile Drawer Header with Close Button */}
+        {/* Navigation List */}
+        <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
+          {/* Mobile Drawer Close Header (Only on mobile drawer) */}
           {mobileOpen && (
-            <div className="flex items-center justify-between px-4 pb-2 pt-1 border-b border-slate-200/80 dark:border-slate-800 md:hidden mb-2">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                Navigation
+            <div className="h-14 flex items-center justify-between px-4 border-b border-slate-200/80 dark:border-slate-800 shrink-0 md:hidden">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Menu
               </span>
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 aria-label="Close Sidebar"
               >
                 <X className="w-5 h-5" />
@@ -199,20 +184,8 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             </div>
           )}
 
-          {/* Section Indicator */}
-          <div className="px-3 pb-1 pt-3 h-7 flex items-center overflow-hidden">
-            <div
-              className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 transition-all duration-200 ${
-                isExpanded ? 'opacity-100 translate-x-0 px-2' : 'opacity-0 -translate-x-2 pointer-events-none'
-              }`}
-            >
-              <Sparkles className="w-3 h-3 text-emerald-500" />
-              <span>Navigation</span>
-            </div>
-          </div>
-
-          {/* Nav Links */}
-          <nav className="space-y-1 px-2 pb-4">
+          {/* Navigation Links List */}
+          <nav className="space-y-1.5 px-2.5 pt-3 pb-4">
             {navItems.map((item) => {
               if (item.requiresAuth && !isAuthenticated) {
                 return null;
@@ -228,57 +201,39 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                     if (onCloseMobile) onCloseMobile();
                   }}
                   title={!isExpanded ? item.label : undefined}
-                  className={`relative flex items-center h-11 rounded-xl transition-all duration-200 group ${
+                  className={`group relative flex items-center h-10 px-1 rounded-xl text-sm font-medium transition-colors duration-150 ${
                     active
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-semibold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                      ? 'bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
                   }`}
                 >
-                  {/* Active Accent Bar */}
+                  {/* Subtle Left Active Indicator Bar */}
                   {active && (
-                    <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-600 dark:bg-emerald-400 rounded-r-full" />
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-emerald-600 dark:bg-emerald-400 rounded-r-full" />
                   )}
 
-                  {/* Fixed-Width Icon Anchor */}
-                  <div className="w-12 h-11 flex items-center justify-center shrink-0">
+                  {/* Icon Column (Strictly aligned in a consistent 40px column) */}
+                  <div className="w-10 h-10 flex items-center justify-center shrink-0">
                     <Icon
-                      className={`w-5 h-5 transition-transform duration-200 ${
+                      className={`w-5 h-5 transition-colors duration-150 ${
                         active
-                          ? 'text-emerald-600 dark:text-emerald-400 scale-105'
-                          : 'text-slate-500 dark:text-slate-400 group-hover:scale-110 group-hover:text-slate-800 dark:group-hover:text-slate-200'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200'
                       }`}
                     />
                   </div>
 
-                  {/* Smooth Expanding Label */}
+                  {/* Menu Label Column (Consistent vertical column, clean single-line typography) */}
                   <div
-                    className={`flex-1 flex items-center justify-between pr-3 overflow-hidden whitespace-nowrap transition-all duration-200 ${
+                    className={`flex-1 pl-2.5 overflow-hidden whitespace-nowrap transition-all duration-200 ${
                       isExpanded
                         ? 'opacity-100 translate-x-0'
                         : 'opacity-0 -translate-x-2 pointer-events-none w-0'
                     }`}
                   >
-                    <div className="flex flex-col text-left truncate">
-                      <span className="text-xs sm:text-sm font-medium leading-none truncate">
-                        {item.label}
-                      </span>
-                      {item.description && (
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 truncate">
-                          {item.description}
-                        </span>
-                      )}
-                    </div>
-
-                    {item.badge && (
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ml-2 ${
-                          item.badgeColor ||
-                          'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
+                    <span className="truncate block leading-none">
+                      {item.label}
+                    </span>
                   </div>
                 </Link>
               );
@@ -288,9 +243,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
 
         {/* Bottom Utility & Profile Section */}
         <div className="p-2 border-t border-slate-200/90 dark:border-slate-800/90 space-y-1.5 bg-slate-50/50 dark:bg-slate-950/30 relative">
-          {/* ============================================================= */}
-          {/* PROFILE QUICK POPUP (Chrome-style floating card)              */}
-          {/* ============================================================= */}
+          {/* PROFILE QUICK POPUP (Chrome-style floating card) */}
           {isAuthenticated && (
             <div
               ref={popupRef}
@@ -408,24 +361,24 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             onClick={toggleTheme}
             type="button"
             title={!isExpanded ? `Theme: ${isDark ? 'Dark' : 'Light'}` : undefined}
-            className="relative w-full flex items-center h-10 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition group cursor-pointer"
+            className="relative w-full flex items-center h-10 px-1 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition group cursor-pointer"
           >
-            <div className="w-12 h-10 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 flex items-center justify-center shrink-0">
               {isDark ? (
-                <Moon className="w-4 h-4 text-amber-400 transition-transform duration-300 group-hover:-rotate-12" />
+                <Moon className="w-5 h-5 text-amber-400 transition-transform duration-300 group-hover:-rotate-12" />
               ) : (
-                <Sun className="w-4 h-4 text-amber-500 transition-transform duration-300 group-hover:rotate-45" />
+                <Sun className="w-5 h-5 text-amber-500 transition-transform duration-300 group-hover:rotate-45" />
               )}
             </div>
 
             <div
-              className={`flex-1 flex items-center justify-between pr-3 overflow-hidden whitespace-nowrap transition-all duration-200 ${
+              className={`flex-1 flex items-center justify-between pr-2.5 pl-2.5 overflow-hidden whitespace-nowrap transition-all duration-200 ${
                 isExpanded
                   ? 'opacity-100 translate-x-0'
                   : 'opacity-0 -translate-x-2 pointer-events-none w-0'
               }`}
             >
-              <span className="text-xs font-medium">
+              <span className="text-sm font-medium">
                 {isDark ? 'Dark Theme' : 'Light Theme'}
               </span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -441,14 +394,14 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
               type="button"
               onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
               title={!isExpanded ? `Profile (${user?.username})` : undefined}
-              className={`relative w-full flex items-center h-12 rounded-xl border transition overflow-hidden text-left cursor-pointer group ${
+              className={`relative w-full flex items-center h-11 px-1 rounded-xl border transition overflow-hidden text-left cursor-pointer group ${
                 isProfilePopupOpen
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/60'
                   : 'bg-white dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/60 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
-              {/* Fixed 48px avatar anchor */}
-              <div className="w-12 h-12 flex items-center justify-center shrink-0">
+              {/* Perfectly aligned 40px avatar column */}
+              <div className="w-10 h-10 flex items-center justify-center shrink-0">
                 {profile?.avatarUrl ? (
                   <img
                     src={profile.avatarUrl}
@@ -462,9 +415,9 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                 )}
               </div>
 
-              {/* Smooth Expanding User Details */}
+              {/* Expanding User Details */}
               <div
-                className={`flex-1 flex items-center justify-between pr-3 overflow-hidden whitespace-nowrap transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-between pr-2.5 pl-2.5 overflow-hidden whitespace-nowrap transition-all duration-200 ${
                   isExpanded
                     ? 'opacity-100 translate-x-0'
                     : 'opacity-0 -translate-x-2 pointer-events-none w-0'
@@ -493,20 +446,20 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                 if (onCloseMobile) onCloseMobile();
               }}
               title={!isExpanded ? 'Sign In' : undefined}
-              className="relative flex items-center h-10 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition group"
+              className="relative flex items-center h-10 px-1 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition group"
             >
-              <div className="w-12 h-10 flex items-center justify-center shrink-0">
-                <LogIn className="w-4 h-4 text-emerald-600 dark:text-emerald-400 transition-transform group-hover:translate-x-0.5" />
+              <div className="w-10 h-10 flex items-center justify-center shrink-0">
+                <LogIn className="w-5 h-5 text-emerald-600 dark:text-emerald-400 transition-transform group-hover:translate-x-0.5" />
               </div>
               <div
-                className={`flex-1 flex items-center justify-between pr-3 overflow-hidden whitespace-nowrap transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-between pr-2.5 pl-2.5 overflow-hidden whitespace-nowrap transition-all duration-200 ${
                   isExpanded
                     ? 'opacity-100 translate-x-0'
                     : 'opacity-0 -translate-x-2 pointer-events-none w-0'
                 }`}
               >
-                <span className="text-xs font-medium">Sign In</span>
-                <ChevronRight className="w-3 h-3 text-slate-400" />
+                <span className="text-sm font-medium">Sign In</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
               </div>
             </Link>
           )}
