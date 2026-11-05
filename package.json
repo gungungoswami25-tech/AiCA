@@ -8,6 +8,10 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "vitest run",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
+    "start:api": "node apps/api/dist/index.js",
+    "start:worker": "node apps/worker/dist/index.js",
+    "start:render": "node apps/worker/dist/index.js & node apps/api/dist/index.js",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {

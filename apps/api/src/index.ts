@@ -4,24 +4,53 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initializeDatabases } from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
 import problemRoutes from './routes/problem.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
 import comparisonRoutes from './routes/comparison.routes.js';
+import problemProposalRoutes from './routes/problem-proposal.routes.js';
 import { createSuccessResponse, createErrorResponse } from '@aica/shared';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
+const HOST = '0.0.0.0';
 
 // Security & Utility Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
+
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((u) => u.trim())
+  : ['http://localhost:5173'];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes('*') ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        origin.includes('localhost')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive in production for client frontends
+    },
     credentials: true
   })
 );
@@ -43,7 +72,7 @@ app.get('/health', (_, res) => {
 // Mount Domain API Routes (v1)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/problems', problemRoutes);
-app.use('/api/v1/algorithms', algorithmRoutes);
+app.use('/api/v1/problem-proposals', problemProposalRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/leaderboards', leaderboardRoutes);
 app.use('/api/v1/comparisons', comparisonRoutes);
@@ -60,11 +89,13 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // Start Server
-async function startServer() {
-  await initializeDatabases();
-  app.listen(PORT, () => {
-    console.log(`[AICA API Gateway] Server listening on http://localhost:${PORT}`);
+// 1. Immediately bind to 0.0.0.0:$PORT so Render port scan succeeds instantly
+app.listen(PORT, HOST, () => {
+  console.log(`[AICA API Gateway] Server listening on http://${HOST}:${PORT}`);
+  
+  // 2. Initialize databases in background without blocking server port binding
+  initializeDatabases().catch((err: any) => {
+    console.warn('[AICA API Gateway] Background database initialization deferred:', err.message);
   });
-}
+});
 
-startServer();

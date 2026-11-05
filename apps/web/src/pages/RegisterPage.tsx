@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Code2, ArrowRight } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 export function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -21,8 +21,8 @@ export function RegisterPage() {
 
     try {
       const res = await api.post('/auth/register', { email, username, password });
-      const { user, accessToken } = res.data.data;
-      setAuth(user, accessToken);
+      const { user, accessToken, profile } = res.data.data;
+      setAuth(user, accessToken, profile);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to create account');
@@ -32,75 +32,87 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
-      <div className="w-full max-w-md p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30">
-            <Code2 className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Create Student Account</h1>
-          <p className="text-xs text-slate-400">
-            Join AI Code Evolution Lab to evaluate, optimize and compare algorithms
-          </p>
+    <div className="flex-1 flex items-center justify-center p-4 min-h-[calc(100vh-120px)]">
+      <div className="w-full max-w-[420px] px-8 sm:px-10 py-10 rounded-2xl bg-white dark:bg-[#232936] border border-slate-200 dark:border-slate-800/80 shadow-xl dark:shadow-2xl">
+        {/* Brand Logo Header */}
+        <div className="text-center pb-8 pt-2">
+          <h1 className="text-4xl font-extrabold italic tracking-tight text-slate-900 dark:text-white font-sans select-none">
+            AiCA
+          </h1>
         </div>
 
+        {/* Error Alert */}
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 text-center">
+          <div className="mb-6 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-500 dark:text-rose-400 text-center">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="space-y-4 text-xs font-sans">
-          <div>
-            <label className="block text-slate-400 mb-1 font-medium">Username</label>
+        {/* Register Form */}
+        <form onSubmit={handleRegister} className="space-y-6">
+          <div className="relative">
             <input
               type="text"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="algo_master"
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition text-sm font-mono"
+              placeholder="Username"
+              className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
           </div>
 
-          <div>
-            <label className="block text-slate-400 mb-1 font-medium">Email Address</label>
+          <div className="relative pt-1">
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@university.edu"
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition text-sm"
+              placeholder="Email Address"
+              className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
           </div>
 
-          <div>
-            <label className="block text-slate-400 mb-1 font-medium">Password</label>
+          <div className="relative pt-1">
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min 8 chars, 1 uppercase, 1 number"
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition text-sm font-mono"
+              placeholder="Password (Min 8 chars, 1 uppercase, 1 digit)"
+              className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 disabled:opacity-50 transition flex items-center justify-center gap-2"
+            className="w-full mt-8 py-3 rounded-md bg-[#ee495c] hover:bg-[#e03a4e] active:scale-[0.99] text-white font-bold text-sm tracking-wider uppercase shadow-md transition disabled:opacity-50 cursor-pointer"
           >
-            {loading ? 'Creating Account...' : 'Register'}
-            <ArrowRight className="w-4 h-4" />
+            {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
           </button>
         </form>
 
-        <div className="text-center text-xs text-slate-500 pt-2 border-t border-slate-800/80">
+        {/* Divider */}
+        <div className="relative flex items-center justify-center my-6">
+          <div className="w-full border-t border-slate-200 dark:border-slate-700/80" />
+          <span className="absolute bg-white dark:bg-[#232936] px-3 text-xs text-slate-500 dark:text-slate-400 font-normal">
+            or
+          </span>
+        </div>
+
+        {/* Google Authentication Button */}
+        <GoogleSignInButton onError={(msg) => setError(msg)} text="signup_with" label="Sign up with Google" />
+
+        {/* Bottom Switcher */}
+        <div className="border-t border-slate-200 dark:border-slate-700/80 my-8" />
+
+        <div className="text-center text-xs text-slate-600 dark:text-slate-400">
           Already have an account?{' '}
-          <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold">
-            Sign In
+          <Link
+            to="/login"
+            className="text-[#ee495c] hover:text-[#ff6b7e] font-bold uppercase tracking-wide ml-1 transition"
+          >
+            LOG IN NOW
           </Link>
         </div>
       </div>

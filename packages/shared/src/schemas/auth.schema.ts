@@ -19,5 +19,10 @@ export const LoginRequestSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
+export const GoogleAuthRequestSchema = z.object({
+  credential: z.string().min(1, 'Google credential token is required')
+});
+
 export type RegisterRequestDto = z.infer<typeof RegisterRequestSchema>;
 export type LoginRequestDto = z.infer<typeof LoginRequestSchema>;
+export type GoogleAuthRequestDto = z.infer<typeof GoogleAuthRequestSchema>;

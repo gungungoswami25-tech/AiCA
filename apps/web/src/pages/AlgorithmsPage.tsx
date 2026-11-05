@@ -60,21 +60,21 @@ export function AlgorithmsPage() {
   return (
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-100 flex items-center gap-3">
-          <Workflow className="w-8 h-8 text-purple-400" />
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
+          <Workflow className="w-8 h-8 text-purple-500 dark:text-purple-400" />
           Algorithms Library
         </h1>
-        <p className="text-sm text-slate-400">Common programming algorithms, organized by topic with a quick overview of their complexity.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Common programming algorithms, organized by topic with a quick overview of their complexity.</p>
       </div>
 
       <div className="relative">
-        <Search className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
+        <Search className="w-5 h-5 text-slate-400 dark:text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
         <input
           type="search"
           placeholder="Search algorithms or topics..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+          className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 shadow-xs transition"
         />
       </div>
 
@@ -83,34 +83,38 @@ export function AlgorithmsPage() {
           <button
             key={item}
             onClick={() => setCategory(item)}
-            className={`shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition ${category === item ? 'bg-indigo-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'}`}
+            className={`shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+              category === item
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shadow-xs'
+            }`}
           >
             {item}
           </button>
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
         <span>{filteredAlgorithms.length} algorithms</span>
         <span>Complexity is a general reference; it can vary by implementation.</span>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50">
-        <div className="hidden md:grid grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_minmax(120px,0.8fr)_minmax(100px,0.7fr)] gap-4 px-5 py-3 bg-slate-900 text-[11px] uppercase tracking-wider text-slate-500">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-xs">
+        <div className="hidden md:grid grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_minmax(120px,0.8fr)_minmax(100px,0.7fr)] gap-4 px-5 py-3 bg-slate-50 dark:bg-slate-900 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
           <span>Algorithm</span><span>What it does</span><span>Time</span><span>Space</span>
         </div>
         {filteredAlgorithms.length ? filteredAlgorithms.map((algorithm) => (
-          <article key={algorithm.name} className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_minmax(120px,0.8fr)_minmax(100px,0.7fr)] gap-2 md:gap-4 px-5 py-4 border-t border-slate-800/80 hover:bg-slate-900 transition">
+          <article key={algorithm.name} className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_minmax(120px,0.8fr)_minmax(100px,0.7fr)] gap-2 md:gap-4 px-5 py-4 border-t border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-900 transition">
             <div>
-              <h2 className="font-semibold text-sm text-slate-200">{algorithm.name}</h2>
-              <span className="inline-flex items-center gap-1 mt-1 text-[11px] text-indigo-300"><Layers3 className="w-3 h-3" />{algorithm.category}</span>
+              <h2 className="font-semibold text-sm text-slate-900 dark:text-slate-200">{algorithm.name}</h2>
+              <span className="inline-flex items-center gap-1 mt-1 text-[11px] text-indigo-600 dark:text-indigo-300"><Layers3 className="w-3 h-3" />{algorithm.category}</span>
             </div>
-            <p className="text-xs leading-relaxed text-slate-400">{algorithm.description}</p>
-            <div className="flex items-center gap-2 text-xs text-slate-300 md:block"><Clock3 className="w-3.5 h-3.5 inline mr-1.5 text-emerald-400 md:hidden" /><span className="text-slate-500 md:hidden">Time:</span><code>{algorithm.time}</code></div>
-            <div className="flex items-center gap-2 text-xs text-slate-300 md:block"><span className="text-slate-500 md:hidden">Space:</span><code>{algorithm.space}</code></div>
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">{algorithm.description}</p>
+            <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 md:block"><Clock3 className="w-3.5 h-3.5 inline mr-1.5 text-emerald-500 dark:text-emerald-400 md:hidden" /><span className="text-slate-500 dark:text-slate-400 md:hidden">Time:</span><code>{algorithm.time}</code></div>
+            <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 md:block"><span className="text-slate-500 dark:text-slate-400 md:hidden">Space:</span><code>{algorithm.space}</code></div>
           </article>
         )) : (
-          <div className="p-12 text-center text-sm text-slate-500">No algorithms found. Try another search or topic.</div>
+          <div className="p-12 text-center text-sm text-slate-500 dark:text-slate-400">No algorithms found. Try another search or topic.</div>
         )}
       </div>
     </div>

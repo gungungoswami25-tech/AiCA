@@ -1,5 +1,6 @@
 
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { ProblemModel } from '../models/mongodb/problem.model.js';
 import {
   createSuccessResponse,
@@ -8,8 +9,22 @@ import {
   ProblemListItem
 } from '@aica/shared';
 
+function checkMongoReady(res: Response): boolean {
+  if (mongoose.connection.readyState !== 1) {
+    res.status(503).json(
+      createErrorResponse(
+        'SERVICE_UNAVAILABLE',
+        'Database connection to MongoDB is unavailable. Please verify MONGODB_URI in your environment settings.'
+      )
+    );
+    return false;
+  }
+  return true;
+}
 
 export async function getProblems(req: Request, res: Response): Promise<void> {
+  if (!checkMongoReady(res)) return;
+
   try {
     const page = Math.max(
       1,
@@ -23,7 +38,10 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
 
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = {
+      // Only serve PUBLISHED problems to general catalog (or unmigrated legacy problems during migration window)
+      status: { $in: ['PUBLISHED', null] }
+    };
 
     if (req.query.difficulty) {
       filter.difficulty = (req.query.difficulty as string).toUpperCase();
@@ -104,34 +122,21 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
     );
 
   } catch (err: any) {
-    console.error(
-      '[ProblemController] getProblems error:',
-      err.message
-    );
-
-    res.status(500).json(
-      createErrorResponse(
-        'INTERNAL_ERROR',
-        'Failed to retrieve problems'
-      )
-    );
+    console.error('[ProblemController] getProblems error:', err.message);
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problems', [{ issue: err.message }]));
   }
 }
 
+export async function getProblemById(req: Request, res: Response): Promise<void> {
+  if (!checkMongoReady(res)) return;
 
-export async function getProblemById(
-  req: Request,
-  res: Response
-): Promise<void> {
   const { id } = req.params;
 
   try {
     const problem: any = await ProblemModel.findById(id).lean();
 
-    if (!problem) {
-      res.status(404).json(
-        createErrorResponse('NOT_FOUND', 'Problem not found')
-      );
+    if (!problem || (problem.status === 'UNPUBLISHED' && req.user?.role !== 'ADMIN')) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'Problem not found or unpublished'));
       return;
     }
 
@@ -166,26 +171,13 @@ export async function getProblemById(
     );
 
   } catch (err: any) {
-    console.error(
-      '[ProblemController] getProblemById error:',
-      err.message
-    );
-
-    res.status(500).json(
-      createErrorResponse(
-        'INTERNAL_ERROR',
-        'Failed to retrieve problem'
-      )
-    );
+    console.error('[ProblemController] getProblemById error:', err.message);
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problem', [{ issue: err.message }]));
   }
 }
 
-
-
-export async function createProblem(
-  req: Request,
-  res: Response
-): Promise<void> {
+export async function createProblem(req: Request, res: Response): Promise<void> {
+  if (!checkMongoReady(res)) return;
 
   const parseResult = ProblemCreateSchema.safeParse(req.body);
 
@@ -226,16 +218,7 @@ export async function createProblem(
     );
 
   } catch (err: any) {
-    console.error(
-      '[ProblemController] createProblem error:',
-      err.message
-    );
-
-    res.status(500).json(
-      createErrorResponse(
-        'INTERNAL_ERROR',
-        'Failed to create problem'
-      )
-    );
+    console.error('[ProblemController] createProblem error:', err.message);
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create problem', [{ issue: err.message }]));
   }
 }
