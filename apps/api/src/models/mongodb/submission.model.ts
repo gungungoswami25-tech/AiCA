@@ -57,7 +57,14 @@ const SubmissionSchema = new Schema<SubmissionDocument>({
   testCasesTotal: { type: Number, default: 0 },
   testCasesPassed: { type: Number, default: 0 },
   testResults: [TestResultSchema],
-  evaluationReportId: { type: String }
+  evaluationReportId: { type: String },
+  aiStatus: {
+    type: String,
+    enum: ['PENDING', 'COMPLETED', 'FAILED', 'SKIPPED'],
+    default: 'PENDING',
+    index: true
+  },
+  aiError: { type: String, default: '' }
 }, {
   timestamps: true,
   toJSON: {

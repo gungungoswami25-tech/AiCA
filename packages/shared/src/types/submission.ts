@@ -1,4 +1,5 @@
 import { SupportedLanguage } from '../constants/languages.js';
+import { AIAnalysisStatus } from './evaluation.js';
 
 export type PipelineStatus =
   | 'QUEUED'
@@ -51,6 +52,8 @@ export interface Submission {
   testCasesPassed: number;
   testResults: TestResultItem[];
   evaluationReportId?: string;
+  aiStatus?: AIAnalysisStatus;
+  aiError?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,4 +73,6 @@ export interface SubmissionStatusStreamEvent {
   totalSteps: number;
   message?: string;
   reportId?: string;
+  aiStatus?: AIAnalysisStatus;
+  compositeScore?: number;
 }
