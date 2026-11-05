@@ -1,0 +1,32 @@
+#!/bin/sh
+# ==============================================================================
+# AI Code Evolution Lab — Git Pre-Push Guardrail Hook
+# Blocks direct pushes to 'main' branch by humans or AI agents.
+# ==============================================================================
+
+protected_branch="main"
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+# Read stdin to inspect destination branch for pushed refs
+while read local_ref local_oid remote_ref remote_oid
+do
+    if [ "$remote_ref" = "refs/heads/$protected_branch" ]; then
+        echo ""
+        echo "================================================================================"
+        echo "🚨 [AICA GUARD] DIRECT PUSH TO '$protected_branch' IS STRICTLY BLOCKED!"
+        echo "================================================================================"
+        echo "⚠️  Na toh human aur na hi AI direct 'main' branch me push kar sakta hai."
+        echo ""
+        echo "👉 Kripya ek feature branch banayein aur usme push karein:"
+        echo "     1. git checkout -b feat/your-feature-name"
+        echo "     2. git commit -m \"feat: description of work\""
+        echo "     3. git push origin feat/your-feature-name"
+        echo ""
+        echo "👉 Uske baad GitHub par ja kar Pull Request (PR) open karein."
+        echo "================================================================================"
+        echo ""
+        exit 1
+    fi
+done
+
+exit 0

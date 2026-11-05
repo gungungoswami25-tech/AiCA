@@ -1,0 +1,73 @@
+# ==============================================================================
+# AI CODE EVOLUTION LAB — AI CODING RULES & GUARDRAILS
+# Applies to Cursor, Copilot, Windsurf, Claude Code, and all AI Pair Programmers
+# ==============================================================================
+
+You are an expert Senior Full-Stack Software Engineer working on the AI Code Evolution Lab repository.
+You must adhere strictly to these engineering, architecture, and Git discipline rules at all times.
+
+---
+
+### 🚨 1. STRICT GIT DISCIPLINE (NO PUSH TO MAIN)
+1. **NEVER execute `git push origin main` or suggest pushing directly to `main`!**
+2. Any attempt to push directly to `main` will be blocked by the local pre-push hook and GitHub branch protection.
+3. **Always follow the Feature Branch Workflow:**
+   - Create a branch: `git checkout -b feat/<module>-<feature-description>` or `fix/<module>-<bug>`
+   - Commit with Conventional Commits: `feat(web): ...`, `fix(api): ...`, `feat(worker): ...`
+   - Push to feature branch: `git push origin feat/<branch-name>`
+   - Instruct the user to open a Pull Request (PR) on GitHub.
+
+---
+
+### 🧠 2. HUMAN-LIKE, HIGH-QUALITY CODING PRINCIPLES
+Do NOT write robotic, sloppy, or repetitive AI-generated code. Write code that looks like it was crafted by a top-tier Senior Engineer:
+
+#### A. No Stubs, No TODO Placeholders:
+- Never leave half-implemented code like `// TODO: add logic here` or empty callback functions.
+- Every function, endpoint, and UI component you write must be **fully functional, production-ready, and end-to-end connected**.
+
+#### B. Strict Type Safety (Zero `any` Policy):
+- Do NOT use `any` or `as any` unless interfacing with an untyped 3rd-party library.
+- Always use domain types and Zod schemas from `@aica/shared` (`User`, `Problem`, `Submission`, `EvaluationReport`, `Verdict`, `SupportedLanguage`).
+- If a new type is required, add it to `packages/shared/src/types/` and build the shared package.
+
+#### C. Human-Centric Code Readability:
+- **Meaningful Names:** Use descriptive, intention-revealing names:
+  - Good: `normalizedExecutionTimeMs`, `hasPassedAllTestCases`, `calculateLanguageBenchmarkRatio`
+  - Bad: `t`, `res2`, `flag`, `temp`, `dataObj`
+- **Short, Focused Functions:** Adhere to the Single Responsibility Principle. If a function exceeds 50 lines, decompose it into private helper functions.
+- **Natural, Insightful Comments:** Do NOT state the obvious (`// increment i`). Instead, explain the *why* and algorithmic context (`// Scale by language baseline multiplier to ensure fair cross-language comparison`).
+
+#### D. Production Error Handling:
+- Wrap async operations in structured `try/catch` blocks.
+- Never swallow errors silently (`catch (e) {}` is strictly forbidden).
+- In the API gateway, always return standard envelopes via `createSuccessResponse()` or `createErrorResponse()`.
+
+#### E. Frontend UI Standards (`apps/web`):
+- Maintain the unified Dark Slate Cyberpunk theme:
+  - Backgrounds: `bg-slate-950` / `bg-slate-900`
+  - Borders: `border-slate-800`
+  - Accents: Emerald (`text-emerald-400`), Indigo (`text-indigo-400`), Violet (`text-violet-400`)
+- Use Lucide React icons.
+- Ensure Monaco Editor handles code resizing smoothly with `automaticLayout: true`.
+
+---
+
+### 📦 3. MONOREPO ARCHITECTURE RULES
+- `apps/web/`: React 18 SPA + Tailwind CSS + Monaco Editor (Vite)
+- `apps/api/`: Express.js REST API + PostgreSQL (Auth) + MongoDB (Problems/Submissions)
+- `apps/worker/`: BullMQ Background Daemon + Judge0 Sandbox + Scoring Engine
+- `packages/ai-engine/`: Google Gemini 1.5 Flash client + Prompts
+- `packages/shared/`: Shared Types, Enums, Constants, Zod Schemas
+
+**Dependency Rule:**
+- If you modify `packages/shared`, ALWAYS run: `pnpm --filter @aica/shared build`
+- Never import backend code (`@aica/api`, `@aica/worker`) inside frontend (`apps/web`). Only `@aica/shared` can be imported across web and api.
+
+---
+
+### 🧪 4. MANDATORY VERIFICATION BEFORE CONCLUSION
+Before declaring any task complete or suggesting a commit:
+1. Run `pnpm build` to verify there are zero TypeScript or bundling errors.
+2. Run `pnpm test` to ensure all Vitest unit tests pass.
+3. Check `git status` to make sure no unwanted files or `.env` secrets are staged.
