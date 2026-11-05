@@ -78,6 +78,14 @@ export interface SubmissionStatusStreamEvent {
   compositeScore?: number;
 }
 
+export type CustomRunVerdict =
+  | 'EXECUTED'
+  | 'TIME_LIMIT_EXCEEDED'
+  | 'MEMORY_LIMIT_EXCEEDED'
+  | 'COMPILATION_ERROR'
+  | 'RUNTIME_ERROR'
+  | 'INTERNAL_ERROR';
+
 export interface CustomRunResult {
   stdout: string;
   stderr: string;
@@ -87,5 +95,5 @@ export interface CustomRunResult {
   statusId: number;
   statusDescription: string;
   isError: boolean;
-  verdict: Verdict;
+  verdict: CustomRunVerdict;
 }

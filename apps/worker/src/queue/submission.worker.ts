@@ -245,6 +245,23 @@ export function startSubmissionWorker(): Worker {
           `[SubmissionWorker] Deterministic verdict locked for ${submissionId}: ${outcome.verdict} (Passed: ${outcome.passedCount}/${outcome.totalCount})`
         );
 
+        // 2b. Atomically increment problem submission counters (fault-tolerant)
+        if (!isTestRun) {
+          try {
+            const probQuery = mongoose.Types.ObjectId.isValid(problemId)
+              ? { _id: new mongoose.Types.ObjectId(problemId) }
+              : { slug: problemId };
+            await problemsCol.updateOne(probQuery, {
+              $inc: {
+                totalSubmissions: 1,
+                ...(outcome.verdict === 'ACCEPTED' ? { acceptedSubmissions: 1 } : {})
+              }
+            });
+          } catch (probIncErr: any) {
+            console.warn(`[SubmissionWorker] Problem counter increment warning for problem ${problemId}:`, probIncErr.message);
+          }
+        }
+
         // 3. Update Leaderboard in Redis (Fault-tolerant; executed strictly AFTER MongoDB persistence)
         if (outcome.verdict === 'ACCEPTED' && !isTestRun) {
           try {

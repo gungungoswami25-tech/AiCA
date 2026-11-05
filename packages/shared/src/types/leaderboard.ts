@@ -29,3 +29,22 @@ export interface ProblemLeaderboardResponse {
   totalRanked: number;
   rankings: LeaderboardEntry[];
 }
+
+export interface GlobalLeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  problemsSolved: number;
+  totalScore: number;
+  avgRuntimeMs: number;
+  streak: number;
+  lastActiveAt?: string;
+}
+
+export interface GlobalLeaderboardResponse {
+  totalRanked: number;
+  page: number;
+  limit: number;
+  rankings: GlobalLeaderboardEntry[];
+}

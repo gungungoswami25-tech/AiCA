@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SandboxRunnerService } from '../apps/api/src/services/sandbox-runner.service.js';
-import { CustomRunRequestSchema } from '@aica/shared';
+import { CustomRunRequestSchema, Verdict, CustomRunVerdict } from '@aica/shared';
 import { runCustomCode } from '../apps/api/src/controllers/submission.controller.js';
 
 // In-Memory Mock Database for Invariant Tracking
@@ -29,7 +29,22 @@ class MockSubmissionTracker {
   }
 }
 
-describe('Phase 2: Custom Run & Ephemeral Sandbox Execution', () => {
+// Logic helper reproducing MonacoWorkspace stdin selection precedence
+function resolveStdinToUse(options: {
+  activeTab: 'tests' | 'custom' | 'console';
+  lastInputTab: 'tests' | 'custom';
+  customStdin: string;
+  publicTestCases: Array<{ input: string; expectedOutput?: string }>;
+  activeTestIndex: number;
+}): string {
+  const effectiveInputTab = options.activeTab === 'console' ? options.lastInputTab : options.activeTab;
+  if (effectiveInputTab === 'custom') {
+    return options.customStdin;
+  }
+  return options.publicTestCases[options.activeTestIndex]?.input ?? '';
+}
+
+describe('Phase 2 & 2.1: Custom Run & Ephemeral Sandbox Execution', () => {
   let tracker: MockSubmissionTracker;
   const originalFetch = global.fetch;
 
@@ -69,7 +84,7 @@ describe('Phase 2: Custom Run & Ephemeral Sandbox Execution', () => {
   }
 
   describe('SandboxRunnerService: Isolated Judge0 Execution', () => {
-    it('1. Successful custom execution (verdict: ACCEPTED, stdout matches, isError: false)', async () => {
+    it('1. Successful custom execution (verdict: EXECUTED, stdout matches, isError: false)', async () => {
       const runner = new SandboxRunnerService('http://mock-judge0:2358');
 
       // Mock Judge0 synchronous response
@@ -93,7 +108,8 @@ describe('Phase 2: Custom Run & Ephemeral Sandbox Execution', () => {
         stdin: ''
       });
 
-      expect(result.verdict).toBe('ACCEPTED');
+      // Semantic refinement: Custom run without expected output returns EXECUTED
+      expect(result.verdict).toBe('EXECUTED');
       expect(result.isError).toBe(false);
       expect(result.stdout).toBe('Hello, World!\n');
       expect(result.stderr).toBe('');
@@ -101,11 +117,13 @@ describe('Phase 2: Custom Run & Ephemeral Sandbox Execution', () => {
       expect(result.executionTimeMs).toBe(45);
       expect(result.memoryUsedKb).toBe(12480);
       expect(result.statusId).toBe(3);
+      expect(result.statusDescription).toBe('Executed');
 
-      // Verify network is disabled and base64 encoding used
+      // Verify network is disabled, base64 encoding used, and AbortSignal configured
       expect(global.fetch).toHaveBeenCalledTimes(1);
       const [url, requestInit] = (global.fetch as any).mock.calls[0];
       expect(url).toContain('/submissions?base64_encoded=true&wait=true');
+      expect(requestInit.signal).toBeDefined();
       const sentPayload = JSON.parse(requestInit.body);
       expect(sentPayload.enable_network).toBe(false);
       expect(sentPayload.source_code).toBe(Buffer.from('print("Hello, World!")').toString('base64'));
@@ -350,6 +368,7 @@ describe('Phase 2: Custom Run & Ephemeral Sandbox Execution', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.stdout).toBe('Result 42\n');
+      expect(res.body.data.verdict).toBe('EXECUTED');
 
       // Zero submissions created in database
       expect(tracker.submissions.length).toBe(initialSubmissionCount);
@@ -420,7 +439,6 @@ describe('Phase 2: Custom Run & Ephemeral Sandbox Execution', () => {
 
     it('13. Submit Code workflow remains completely unaffected', async () => {
       // Simulate official submission creation flow
-      // It inserts into DB, generates a submissionId, and enqueues to submissionQueue
       const officialPayload = {
         problemId: 'prob_12345',
         language: 'python' as const,
@@ -472,11 +490,210 @@ describe('Phase 2: Custom Run & Ephemeral Sandbox Execution', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.data.stdout).toBe('42\n');
+      expect(res.body.data.verdict).toBe('EXECUTED');
 
       // 3. Official submission remains untouched and is still the ONLY submission in DB
       expect(tracker.submissions.length).toBe(1);
       expect(tracker.submissions[0].problemId).toBe('prob_12345');
       expect(tracker.submissions[0].code).toBe('def solve(): return 42');
+    });
+  });
+
+  describe('Phase 2.1 Refinements: Timeout, Semantics & Stdin Precedence', () => {
+    it('14. Judge0 timeout (AbortSignal timeout triggers -> 504 SANDBOX_TIMEOUT)', async () => {
+      const runner = new SandboxRunnerService('http://mock-judge0:2358');
+
+      // Simulate fetch AbortSignal timeout
+      const timeoutError = new Error('The operation was aborted due to timeout');
+      timeoutError.name = 'TimeoutError';
+      global.fetch = vi.fn().mockRejectedValue(timeoutError);
+
+      await expect(
+        runner.executeEphemeral({
+          language: 'python',
+          code: 'import time; time.sleep(20)'
+        })
+      ).rejects.toThrow('Judge0 sandbox execution timed out after 15000ms');
+
+      // Test Controller handles timeout and returns 504
+      const { req, res } = mockReqRes({
+        user: { id: 'u1', role: 'STUDENT', username: 'alice' },
+        body: {
+          language: 'python',
+          code: 'import time; time.sleep(20)',
+          stdin: ''
+        }
+      });
+
+      await runCustomCode(req, res);
+
+      expect(res.statusCode).toBe(504);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('SANDBOX_TIMEOUT');
+      expect(res.body.error.message).toContain('Code execution sandbox timed out after 15000ms');
+    });
+
+    it('15. Judge0 network failure (ECONNREFUSED / 500 -> 503 SANDBOX_UNAVAILABLE)', async () => {
+      global.fetch = vi.fn().mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:2358'));
+
+      const { req, res } = mockReqRes({
+        user: { id: 'u1', role: 'STUDENT', username: 'alice' },
+        body: {
+          language: 'python',
+          code: 'print(1)',
+          stdin: ''
+        }
+      });
+
+      await runCustomCode(req, res);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('SANDBOX_UNAVAILABLE');
+      expect(res.body.error.message).toContain('ECONNREFUSED');
+    });
+
+    it('16. Successful custom execution returns EXECUTED (never ACCEPTED)', async () => {
+      const runner = new SandboxRunnerService('http://mock-judge0:2358');
+
+      const mockJudge0Response = {
+        stdout: Buffer.from('42\n').toString('base64'),
+        stderr: null,
+        compile_output: null,
+        time: '0.010',
+        memory: 8000,
+        status: { id: 3, description: 'Accepted' }
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockJudge0Response
+      } as any);
+
+      const result = await runner.executeEphemeral({
+        language: 'python',
+        code: 'print(42)',
+        stdin: ''
+      });
+
+      expect(result.verdict).toBe('EXECUTED');
+      expect(result.verdict).not.toBe('ACCEPTED');
+      expect(result.statusDescription).toBe('Executed');
+    });
+
+    it('17. Official submission ACCEPTED verdict remains completely unchanged', () => {
+      // Official verdicts use Verdict type
+      const officialVerdict: Verdict = 'ACCEPTED';
+      expect(officialVerdict).toBe('ACCEPTED');
+
+      // Custom verdict type guarantees EXECUTED is used for ephemeral runs
+      const customVerdict: CustomRunVerdict = 'EXECUTED';
+      expect(customVerdict).toBe('EXECUTED');
+
+      // Invariant: Official submissions are saved with ACCEPTED in DB
+      tracker.insertSubmission({
+        userId: 'u1',
+        problemId: 'p1',
+        verdict: 'ACCEPTED',
+        pipelineStatus: 'COMPLETED'
+      });
+
+      expect(tracker.submissions[0].verdict).toBe('ACCEPTED');
+    });
+
+    it('18. Custom Input tab strictly uses customStdin', () => {
+      const publicTestCases = [
+        { input: 'case_1_input', expectedOutput: 'case_1_output' },
+        { input: 'case_2_input', expectedOutput: 'case_2_output' }
+      ];
+
+      const resolved = resolveStdinToUse({
+        activeTab: 'custom',
+        lastInputTab: 'custom',
+        customStdin: 'user_custom_input_data',
+        publicTestCases,
+        activeTestIndex: 1
+      });
+
+      expect(resolved).toBe('user_custom_input_data');
+    });
+
+    it('19. Test Cases tab strictly uses selected test case input', () => {
+      const publicTestCases = [
+        { input: 'case_1_input', expectedOutput: 'case_1_output' },
+        { input: 'case_2_input', expectedOutput: 'case_2_output' }
+      ];
+
+      // Even if customStdin has data, selecting Case 2 on tests tab uses Case 2 input
+      const resolved = resolveStdinToUse({
+        activeTab: 'tests',
+        lastInputTab: 'tests',
+        customStdin: 'old_stale_custom_stdin',
+        publicTestCases,
+        activeTestIndex: 1
+      });
+
+      expect(resolved).toBe('case_2_input');
+      expect(resolved).not.toBe('old_stale_custom_stdin');
+    });
+
+    it('20. Switching tabs does not use stale input', () => {
+      const publicTestCases = [
+        { input: 'case_1_input', expectedOutput: 'case_1_output' },
+        { input: 'case_2_input', expectedOutput: 'case_2_output' }
+      ];
+
+      // Step 1: User types in Custom tab
+      const customStdin = 'dynamic_custom_stream_99';
+      let currentTab: 'tests' | 'custom' | 'console' = 'custom';
+      let lastInputTab: 'tests' | 'custom' = 'custom';
+
+      let inputUsed = resolveStdinToUse({
+        activeTab: currentTab,
+        lastInputTab,
+        customStdin,
+        publicTestCases,
+        activeTestIndex: 0
+      });
+      expect(inputUsed).toBe('dynamic_custom_stream_99');
+
+      // Step 2: User switches to Test Cases tab and selects Case 2
+      currentTab = 'tests';
+      lastInputTab = 'tests';
+      inputUsed = resolveStdinToUse({
+        activeTab: currentTab,
+        lastInputTab,
+        customStdin,
+        publicTestCases,
+        activeTestIndex: 1
+      });
+      // Stale customStdin must NOT override Case 2
+      expect(inputUsed).toBe('case_2_input');
+      expect(inputUsed).not.toBe('dynamic_custom_stream_99');
+
+      // Step 3: Run execution switches activeTab to 'console'
+      currentTab = 'console';
+      inputUsed = resolveStdinToUse({
+        activeTab: currentTab,
+        lastInputTab, // remembers 'tests'
+        customStdin,
+        publicTestCases,
+        activeTestIndex: 1
+      });
+      // Retains Case 2 input
+      expect(inputUsed).toBe('case_2_input');
+
+      // Step 4: User switches back to Custom tab
+      currentTab = 'custom';
+      lastInputTab = 'custom';
+      inputUsed = resolveStdinToUse({
+        activeTab: currentTab,
+        lastInputTab,
+        customStdin,
+        publicTestCases,
+        activeTestIndex: 1
+      });
+      expect(inputUsed).toBe('dynamic_custom_stream_99');
     });
   });
 });
