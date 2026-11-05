@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Search, ArrowRight, Tag } from 'lucide-react';
+import { BookOpen, Search, ArrowRight, Tag, Sparkles } from 'lucide-react';
 import { ProblemListItem, ProblemDifficulty } from '@aica/shared';
 import { api } from '../services/api';
 
@@ -23,37 +23,9 @@ export function ProblemListPage() {
 
       const res = await api.get('/problems', { params });
       setProblems(res.data.data.problems || []);
-    } catch {
-      // Fallback sample data if backend DB is not yet populated
-      setProblems([
-        {
-          id: 'two-sum-optimal',
-          title: 'Two Sum Optimal',
-          slug: 'two-sum-optimal',
-          difficulty: 'EASY',
-          tags: ['Arrays', 'Hash-Table'],
-          totalSubmissions: 48,
-          acceptanceRate: 75.0
-        },
-        {
-          id: 'longest-substring',
-          title: 'Longest Substring Without Repeating Characters',
-          slug: 'longest-substring-without-repeating',
-          difficulty: 'MEDIUM',
-          tags: ['Strings', 'Sliding-Window', 'Hash-Table'],
-          totalSubmissions: 32,
-          acceptanceRate: 56.2
-        },
-        {
-          id: 'container-water',
-          title: 'Container With Most Water',
-          slug: 'container-with-most-water',
-          difficulty: 'MEDIUM',
-          tags: ['Arrays', 'Two-Pointers', 'Greedy'],
-          totalSubmissions: 24,
-          acceptanceRate: 62.5
-        }
-      ]);
+    } catch (err: any) {
+      console.warn('[ProblemListPage] Failed to fetch problems:', err.message);
+      setProblems([]);
     } finally {
       setLoading(false);
     }
@@ -123,7 +95,18 @@ export function ProblemListPage() {
         {loading ? (
           <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-mono">Loading problem repository...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 dark:text-slate-400">No problems found matching your criteria.</div>
+          <div className="p-12 text-center bg-white dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              No problems found matching your criteria.
+            </p>
+            <Link
+              to="/create-problem"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+              Create Problem with AI
+            </Link>
+          </div>
         ) : (
           filtered.map((prob) => (
             <Link

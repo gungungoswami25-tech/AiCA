@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowLeftRight, ChevronLeft, ShieldCheck } from 'lucide-react';
+import {
+  BookOpen,
+  Sparkles,
+  ArrowLeftRight,
+  ChevronLeft,
+  ShieldCheck,
+  History,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Code2,
+  X,
+  Loader2
+} from 'lucide-react';
 import { Problem, EvaluationReport, SolutionComparison, LANGUAGE_CONFIGS } from '@aica/shared';
 import { MonacoWorkspace } from '../components/MonacoWorkspace';
 import { EvaluationReportView } from '../components/EvaluationReportView';
@@ -11,9 +24,12 @@ export function WorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeLeftTab, setActiveLeftTab] = useState<'desc' | 'report' | 'compare'>('desc');
+  const [activeLeftTab, setActiveLeftTab] = useState<'desc' | 'report' | 'compare' | 'submissions'>('desc');
   const [report, setReport] = useState<EvaluationReport | null>(null);
   const [comparison, setComparison] = useState<SolutionComparison | null>(null);
+  const [pastSubmissions, setPastSubmissions] = useState<any[]>([]);
+  const [loadingPastSubmissions, setLoadingPastSubmissions] = useState(false);
+  const [inspectedCode, setInspectedCode] = useState<{ code: string; language: string; verdict: string; date: string } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -26,61 +42,24 @@ export function WorkspacePage() {
     try {
       const res = await api.get(`/problems/${problemId}`);
       setProblem(res.data.data);
-    } catch {
-      // Fallback default problem if backend DB is not yet running
-      setProblem({
-        id: problemId,
-        title: 'Two Sum Optimal',
-        slug: 'two-sum-optimal',
-        difficulty: 'EASY',
-        tags: ['Arrays', 'Hash-Table'],
-        description: `Given an array of integers \`nums\` and an integer \`target\`, return *indices of the two numbers such that they add up to \`target\`*.\n\nYou may assume that each input would have ***exactly one solution***, and you may not use the same element twice.`,
-        constraints: [
-          '2 <= nums.length <= 10^4',
-          '-10^9 <= nums[i] <= 10^9',
-          '-10^9 <= target <= 10^9',
-          'Only one valid answer exists.'
-        ],
-        examples: [
-          {
-            input: 'nums = [2,7,11,15], target = 9',
-            output: '[0,1]',
-            explanation: 'Because nums[0] + nums[1] == 9, we return [0, 1].'
-          }
-        ],
-        timeLimitMs: 2000,
-        memoryLimitKb: 262144,
-        benchmarks: {
-          targetTimeMs: 15,
-          pythonMultiplier: 4.0,
-          jsMultiplier: 2.5,
-          cppMultiplier: 1.0,
-          javaMultiplier: 2.0
-        },
-        starterCode: {
-          python: `def twoSum(nums: list[int], target: int) -> list[int]:\n    # Implement O(N) hash map solution here\n    lookup = {}\n    for i, num in enumerate(nums):\n        diff = target - num\n        if diff in lookup:\n            return [lookup[diff], i]\n        lookup[num] = i\n    return []\n`,
-          javascript: `function twoSum(nums, target) {\n    const lookup = new Map();\n    for (let i = 0; i < nums.length; i++) {\n        const diff = target - nums[i];\n        if (lookup.has(diff)) return [lookup.get(diff), i];\n        lookup.set(nums[i], i);\n    }\n    return [];\n}\n`,
-          cpp: `#include <vector>\n#include <unordered_map>\n\nstd::vector<int> twoSum(std::vector<int>& nums, int target) {\n    std::unordered_map<int, int> lookup;\n    for (int i = 0; i < nums.size(); i++) {\n        int diff = target - nums[i];\n        if (lookup.count(diff)) return {lookup[diff], i};\n        lookup[nums[i]] = i;\n    }\n    return {};\n}\n`,
-          java: `import java.util.*;\n\nclass Solution {\n    public int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> lookup = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int diff = target - nums[i];\n            if (lookup.containsKey(diff)) return new int[]{lookup.get(diff), i};\n            lookup.put(nums[i], i);\n        }\n        return new int[]{};\n    }\n}\n`
-        },
-        testCases: [
-          {
-            id: 'tc-1',
-            input: '4\n2 7 11 15\n9',
-            expectedOutput: '0 1',
-            isPublic: true,
-            isEdgeCase: false,
-            weight: 1.0
-          }
-        ],
-        totalSubmissions: 48,
-        acceptedSubmissions: 36,
-        createdBy: 'system',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+    } catch (err: any) {
+      console.warn('[WorkspacePage] Problem fetch failed:', err.message);
+      setProblem(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProblemSubmissions = async () => {
+    if (!problem?.id) return;
+    setLoadingPastSubmissions(true);
+    try {
+      const res = await api.get(`/submissions/my?problemId=${problem.id}&limit=20`);
+      setPastSubmissions(res.data?.data?.submissions || []);
+    } catch (err: any) {
+      console.warn('[WorkspacePage] Submissions fetch failed:', err.message);
+    } finally {
+      setLoadingPastSubmissions(false);
     }
   };
 
@@ -89,104 +68,44 @@ export function WorkspacePage() {
       const res = await api.get(`/submissions/${submissionId}/report`);
       setReport(res.data.data);
       setActiveLeftTab('report');
-    } catch {
-      // Fallback synthetic report for preview
-      setReport({
-        id: reportId,
-        submissionId,
-        userId: 'student-1',
-        username: 'algo_learner',
-        problemId: problem?.id || 'two-sum',
-        verdict: 'ACCEPTED',
-        pipelineStatus: 'COMPLETED',
-        summary: 'All 5 test cases passed with optimal execution metrics.',
-        aiAnalysis: {
-          status: 'COMPLETED',
-          mode: 'OPTIMIZATION',
-          codeSummary: 'Single-pass Hash Map approach.',
-          theoreticalComplexity: {
-            timeComplexity: 'O(N)',
-            spaceComplexity: 'O(N)',
-            explanation: 'Single linear iteration with O(1) average hash lookup time.'
-          },
-          codeQuality: {
-            score: 9.0,
-            readabilityAnalysis: 'Clear variable names, idiomatic syntax, and proper boundary safeguards.',
-            codeSmells: [],
-            positivePractices: ['Used dictionary comprehension', 'Early return pattern']
-          },
-          optimizationSuggestions: [
-            {
-              title: 'Memory Overhead Optimization',
-              rationale: 'Pre-allocating hash map capacity reduces dynamic resizing overhead in high-throughput loops.',
-              expectedTimeImpact: '~5-10% speedup',
-              refactoredSnippet: '# Pre-sized dictionary initialization where appropriate'
-            }
-          ]
-        },
-        metrics: {
-          rawTimeMs: 38,
-          normalizedTimeMs: 9.5,
-          rawMemoryKb: 14200,
-          normalizedMemoryKb: 2048,
-          compositeScore: 94.6,
-          percentileTime: 92,
-          percentileMemory: 88
-        },
-        createdAt: new Date().toISOString()
-      });
-      setActiveLeftTab('report');
+      fetchProblemSubmissions();
+    } catch (err: any) {
+      console.warn('[WorkspacePage] Evaluation report deferred or not found:', err.message);
     }
   };
 
-  const handleCompareClick = () => {
-    // Generate synthetic comparison for demo
-    setComparison({
-      id: 'comp-1',
-      problemId: problem?.id || 'two-sum',
-      submissionA: {
-        submissionId: 'sub-brute-force',
-        userId: 'student-1',
-        username: 'Initial Brute Force',
-        language: 'python',
-        code: `def twoSum(nums, target):\n    # O(N^2) Nested Iteration\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n    return []\n`,
-        executionTimeMs: 1850,
-        memoryUsedKb: 13500,
-        timeComplexity: 'O(N^2)',
-        spaceComplexity: 'O(1)',
-        qualityScore: 5.5,
-        compositeScore: 48.2,
-        createdAt: new Date(Date.now() - 3600000).toISOString()
-      },
-      submissionB: {
-        submissionId: 'sub-hash-map',
-        userId: 'student-1',
-        username: 'Optimal Hash Map',
-        language: 'python',
-        code: `def twoSum(nums, target):\n    # O(N) Hash Table Lookup\n    lookup = {}\n    for i, num in enumerate(nums):\n        diff = target - num\n        if diff in lookup:\n            return [lookup[diff], i]\n        lookup[num] = i\n    return []\n`,
-        executionTimeMs: 38,
-        memoryUsedKb: 14200,
-        timeComplexity: 'O(N)',
-        spaceComplexity: 'O(N)',
-        qualityScore: 9.0,
-        compositeScore: 94.6,
-        createdAt: new Date().toISOString()
-      },
-      deltaAnalysis: {
-        executionTimeDiffMs: -1812,
-        memoryDiffKb: 700,
-        qualityScoreDiff: 3.5,
-        timeComplexityComparison: 'Reduced quadratic O(N^2) search to linear O(N) single-pass lookup.',
-        spaceComplexityComparison: 'Traded O(N) auxiliary RAM for an exponential speedup.',
-        tradeOffSummary: 'Approach B transforms an asymptotic bottleneck into an optimal O(N) lookup using a Hash Map, achieving a 48x execution speedup.'
-      },
-      createdAt: new Date().toISOString()
-    });
-    setActiveLeftTab('compare');
+  const handleCompareClick = async () => {
+    if (!problem?.id) return;
+    try {
+      const res = await api.get(`/comparisons/problem/${problem.id}`);
+      if (res.data?.data) {
+        setComparison(res.data.data);
+        setActiveLeftTab('compare');
+      }
+    } catch {
+      setActiveLeftTab('desc');
+    }
   };
 
-  if (loading || !problem) {
+  if (loading) {
     return <div className="p-12 text-center text-slate-500 font-mono">Loading coding workspace...</div>;
+  }
+
+  if (!problem) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Problem Not Found</h2>
+        <p className="text-sm text-slate-500 max-w-md">
+          The requested problem challenge does not exist or has not yet been published to the catalog.
+        </p>
+        <Link
+          to="/problems"
+          className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition"
+        >
+          Return to Problem Catalog
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -245,6 +164,20 @@ export function WorkspacePage() {
           >
             <ArrowLeftRight className="w-3.5 h-3.5" />
             Compare Solutions
+          </button>
+          <button
+            onClick={() => {
+              fetchProblemSubmissions();
+              setActiveLeftTab('submissions');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+              activeLeftTab === 'submissions'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            Submissions {pastSubmissions.length > 0 ? `(${pastSubmissions.length})` : ''}
           </button>
         </div>
       </div>
@@ -340,6 +273,94 @@ export function WorkspacePage() {
               )}
             </div>
           )}
+
+          {activeLeftTab === 'submissions' && (
+            <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Your Problem Submissions</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Prior sandbox kernel test runs for this problem</p>
+                </div>
+                <button
+                  onClick={fetchProblemSubmissions}
+                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {loadingPastSubmissions ? (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                  <p className="text-xs">Loading past submissions...</p>
+                </div>
+              ) : pastSubmissions.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                  <History className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-xs">No prior submissions recorded for this problem yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pastSubmissions.map((sub) => {
+                    const isAccepted = sub.verdict === 'ACCEPTED';
+                    return (
+                      <div
+                        key={sub.id}
+                        className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          {isAccepted ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                          )}
+                          <div>
+                            <div className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                              {sub.verdict}
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                              <span className="uppercase font-semibold">{sub.language}</span>
+                              <span>&bull;</span>
+                              <span>{new Date(sub.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="text-right font-mono">
+                            <span className="block font-semibold text-slate-800 dark:text-slate-200">
+                              {sub.executionTimeMs != null ? `${sub.executionTimeMs}ms` : '--'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {sub.memoryUsedKb != null ? `${Math.round(sub.memoryUsedKb / 1024)}MB` : '--'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const fullRes = await api.get(`/submissions/${sub.id}`);
+                                setInspectedCode({
+                                  code: fullRes.data.data.code,
+                                  language: sub.language,
+                                  verdict: sub.verdict,
+                                  date: new Date(sub.createdAt).toLocaleString()
+                                });
+                              } catch {
+                                // fallback
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 font-semibold text-[11px] transition cursor-pointer"
+                          >
+                            Inspect Code
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Pane (Monaco Editor Workspace) */}
@@ -350,6 +371,45 @@ export function WorkspacePage() {
           />
         </div>
       </div>
+
+      {/* Code Snapshot Modal */}
+      {inspectedCode && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Code2 className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Submitted Code Snapshot ({inspectedCode.language})
+                </h3>
+                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {inspectedCode.verdict}
+                </span>
+              </div>
+              <button
+                onClick={() => setInspectedCode(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 font-mono text-xs">
+              <pre className="p-4 rounded-xl bg-slate-950 text-slate-100 whitespace-pre-wrap overflow-x-auto">
+                {inspectedCode.code}
+              </pre>
+            </div>
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
+              <span>Submitted: {inspectedCode.date}</span>
+              <button
+                onClick={() => setInspectedCode(null)}
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold cursor-pointer hover:bg-indigo-500"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

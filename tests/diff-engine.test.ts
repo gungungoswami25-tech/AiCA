@@ -30,4 +30,24 @@ describe('Deterministic Test Diff Engine', () => {
     const encoded = Buffer.from('42\nAnswer').toString('base64');
     expect(TestEvaluatorService.decodeBase64(encoded)).toBe('42\nAnswer');
   });
+
+  it('should match whitespace-separated integer tokens regardless of inter-token spacing', () => {
+    const actual = '0    1\n';
+    const expected = '0 1';
+    expect(TestEvaluatorService.compareOutputs(actual, expected)).toBe(true);
+  });
+
+  it('should match multiple float tokens within epsilon', () => {
+    const actual = '0.500000 1.25000001\n';
+    const expected = '0.5 1.25';
+    expect(TestEvaluatorService.compareOutputs(actual, expected)).toBe(true);
+  });
+
+  it('should obey competitive programming verdict precedence hierarchy', () => {
+    expect(TestEvaluatorService.getHigherPriorityVerdict('ACCEPTED', 'WRONG_ANSWER')).toBe('WRONG_ANSWER');
+    expect(TestEvaluatorService.getHigherPriorityVerdict('WRONG_ANSWER', 'TIME_LIMIT_EXCEEDED')).toBe('TIME_LIMIT_EXCEEDED');
+    expect(TestEvaluatorService.getHigherPriorityVerdict('TIME_LIMIT_EXCEEDED', 'RUNTIME_ERROR')).toBe('RUNTIME_ERROR');
+    expect(TestEvaluatorService.getHigherPriorityVerdict('RUNTIME_ERROR', 'COMPILATION_ERROR')).toBe('COMPILATION_ERROR');
+    expect(TestEvaluatorService.getHigherPriorityVerdict('WRONG_ANSWER', 'MEMORY_LIMIT_EXCEEDED')).toBe('MEMORY_LIMIT_EXCEEDED');
+  });
 });

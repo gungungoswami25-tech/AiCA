@@ -50,3 +50,51 @@ export const ComparisonResponseSchema = z.object({
   tradeOffSummary: z.string(),
   architecturalEvolution: z.string()
 });
+
+export const ClarificationResponseSchema = z.object({
+  isClearAndComplete: z.boolean(),
+  missingInformationSummary: z.string().optional(),
+  clarifications: z.array(
+    z.object({
+      id: z.string(),
+      question: z.string(),
+      options: z.array(z.string()).optional()
+    })
+  ).default([])
+});
+
+export const ProblemGenerationResponseSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
+  tags: z.array(z.string()),
+  description: z.string(),
+  constraints: z.array(z.string()),
+  examples: z.array(
+    z.object({
+      input: z.string(),
+      output: z.string(),
+      explanation: z.string().optional()
+    })
+  ),
+  starterCode: z.object({
+    python: z.string(),
+    javascript: z.string(),
+    cpp: z.string(),
+    java: z.string()
+  }),
+  referenceSolutions: z.object({
+    canonicalPython: z.string(),
+    secondaryOracle: z.string()
+  }),
+  testCases: z.array(
+    z.object({
+      id: z.string(),
+      input: z.string(),
+      expectedOutput: z.string(),
+      isPublic: z.boolean().default(false),
+      isEdgeCase: z.boolean().default(false),
+      explanation: z.string().optional()
+    })
+  )
+});

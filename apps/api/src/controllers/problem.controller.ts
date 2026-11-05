@@ -29,7 +29,10 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = {
+      // Only serve PUBLISHED problems to general catalog (or unmigrated legacy problems during migration window)
+      status: { $in: ['PUBLISHED', null] }
+    };
 
     if (req.query.difficulty) {
       filter.difficulty = (req.query.difficulty as string).toUpperCase();
@@ -86,14 +89,21 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
 export async function getProblemById(req: Request, res: Response): Promise<void> {
   if (!checkMongoReady(res)) return;
 
-  const { id } = req.params;
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  if (!id) {
+    res.status(400).json(createErrorResponse('VALIDATION_ERROR', 'Problem identifier is required'));
+    return;
+  }
 
   try {
-    // Zero-Leakage Guarantee: filter out all testCases where isPublic is false!
-    const problem: any = await ProblemModel.findById(id).lean();
+    // Support dual lookup: by MongoDB ObjectId OR URL-friendly slug
+    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+    const problem: any = await ProblemModel.findOne(query).lean();
 
-    if (!problem) {
-      res.status(404).json(createErrorResponse('NOT_FOUND', 'Problem not found'));
+    if (!problem || (problem.status === 'UNPUBLISHED' && req.user?.role !== 'ADMIN')) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'Problem not found or unpublished'));
       return;
     }
 

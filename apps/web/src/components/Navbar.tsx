@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow } from 'lucide-react';
+import { Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow, Sparkles, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { ThemeToggle } from './ThemeToggle';
 

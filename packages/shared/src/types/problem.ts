@@ -1,6 +1,21 @@
 import { SupportedLanguage } from '../constants/languages.js';
 
 export type ProblemDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export type ProblemLifecycleStatus = 'UNPUBLISHED' | 'PUBLISHED' | 'DEPRECATED' | 'ARCHIVED';
+
+export type ProposalStatus =
+  | 'DRAFT'
+  | 'QUEUED_FOR_GENERATION'
+  | 'AI_ANALYZING'
+  | 'AWAITING_CLARIFICATION'
+  | 'GENERATED'
+  | 'QUEUED_FOR_VALIDATION'
+  | 'VALIDATING'
+  | 'VALIDATION_FAILED'
+  | 'PENDING_REVIEW'
+  | 'PUBLISHED'
+  | 'REJECTED'
+  | 'DISCARDED';
 
 export interface TestCase {
   id: string;
@@ -30,6 +45,9 @@ export interface Problem {
   id: string; // MongoDB ObjectId
   title: string;
   slug: string;
+  status: ProblemLifecycleStatus;
+  version: number;
+  sourceProposalId?: string;
   difficulty: ProblemDifficulty;
   tags: string[];
   description: string;
@@ -56,4 +74,59 @@ export interface ProblemListItem {
   tags: string[];
   acceptanceRate: number;
   totalSubmissions: number;
+}
+
+export interface ProblemProposalClarification {
+  id: string;
+  question: string;
+  options?: string[];
+  userAnswer?: string;
+}
+
+export interface ProblemProposalValidationReport {
+  differentialConcordancePercent: number;
+  totalCasesEvaluated: number;
+  canonicalStats: { minRuntimeMs: number; medianRuntimeMs: number; memoryKb: number };
+  secondaryStats: { minRuntimeMs: number; medianRuntimeMs: number; memoryKb: number };
+  invariantsPassed: boolean;
+  contradictionsDetected: boolean;
+  failureReason?: string;
+  validatedAt: string;
+}
+
+export interface ProblemProposalGeneratedContent {
+  title: string;
+  slug: string;
+  difficulty: ProblemDifficulty;
+  tags: string[];
+  description: string;
+  constraints: string[];
+  examples: ProblemExample[];
+  starterCode: Record<SupportedLanguage, string>;
+  referenceSolutions: {
+    canonicalPython: string;
+    secondaryOracle: string;
+  };
+  testCases: TestCase[];
+}
+
+export interface ProblemProposal {
+  id: string;
+  creatorUserId: string;
+  creatorUsername: string;
+  originalPrompt: string;
+  status: ProposalStatus;
+  version: number;
+  idempotencyKey: string;
+  clarifications: ProblemProposalClarification[];
+  generatedContent?: ProblemProposalGeneratedContent;
+  validationReport?: ProblemProposalValidationReport;
+  adminReview?: {
+    reviewedBy?: string;
+    reviewedAt?: string;
+    decisionNotes?: string;
+  };
+  publishedProblemId?: string;
+  createdAt: string;
+  updatedAt: string;
 }

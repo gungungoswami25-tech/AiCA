@@ -1035,7 +1035,85 @@ export function ProfilePage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              ) : (
+                realSubmissions.map((sub: any) => {
+                  const isAccepted = sub.verdict === 'ACCEPTED';
+                  const dateStr = new Date(sub.createdAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+
+                  return (
+                    <div
+                      key={sub.id}
+                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-base text-slate-900 dark:text-slate-100">
+                            {sub.problemTitle || 'Challenge Solution'}
+                          </span>
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                              isAccepted
+                                ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60'
+                                : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60'
+                            }`}
+                          >
+                            {sub.verdict}
+                          </span>
+                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">
+                            {sub.language}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                          <span>{dateStr}</span>
+                          <Link
+                            to={`/workspace/${sub.problemId}`}
+                            className="font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-1"
+                          >
+                            Open Workspace
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Execution Metrics Ribbon */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-xs">
+                        <div>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                            Execution Latency
+                          </span>
+                          <span className="font-mono font-extrabold text-slate-900 dark:text-slate-100">
+                            {sub.executionTimeMs != null ? `${sub.executionTimeMs}ms` : '--'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                            Peak Memory Footprint
+                          </span>
+                          <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                            {sub.memoryUsedKb != null ? `${Math.round(sub.memoryUsedKb / 1024)} MB` : '--'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                            Composite Quality Score
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            {sub.compositeScore != null ? `${sub.compositeScore} / 100` : 'Evaluated'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             {/* Mastery Badges Grid */}

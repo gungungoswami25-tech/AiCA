@@ -30,12 +30,22 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
   const { isDark } = useThemeStore();
   const [language, setLanguage] = useState<SupportedLanguage>('python');
   const [code, setCode] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'tests' | 'console'>('tests');
+  const [activeTab, setActiveTab] = useState<'tests' | 'custom' | 'console'>('tests');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string | null>(null);
   const [activeTestIndex, setActiveTestIndex] = useState(0);
+  const [customStdin, setCustomStdin] = useState<string>('');
 
   const { currentEvent, isStreaming, startStream } = useSubmissionSSE(null);
+
+  const publicTestCases = problem.testCases || [];
+
+  // Initialize customStdin with first testcase input
+  useEffect(() => {
+    if (publicTestCases.length > 0 && !customStdin) {
+      setCustomStdin(publicTestCases[0].input);
+    }
+  }, [publicTestCases]);
 
   // Load starter code or saved draft
   useEffect(() => {
@@ -65,9 +75,43 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
     localStorage.removeItem(`draft_${problem.id}_${language}`);
   };
 
-  const handleSubmit = async (isTestRun: boolean) => {
+  // Ephemeral Custom Run (Fast isolated sandbox without polluting DB history)
+  const handleRunCustom = async () => {
     setIsSubmitting(true);
-    setConsoleOutput(null);
+    setConsoleOutput('Executing in isolated Judge0 sandbox...');
+    setActiveTab('console');
+
+    const stdinToUse =
+      activeTab === 'custom'
+        ? customStdin
+        : (publicTestCases[activeTestIndex]?.input || customStdin);
+
+    try {
+      const res = await api.post('/submissions/run-custom', {
+        language,
+        code,
+        stdin: stdinToUse
+      });
+
+      const data = res.data.data;
+      if (data.compileOutput) {
+        setConsoleOutput(`[COMPILATION ERROR]\n${data.compileOutput}`);
+      } else if (data.stderr) {
+        setConsoleOutput(`[RUNTIME ERROR]\n${data.stderr}\n\n[STANDARD OUTPUT]\n${data.stdout || '(no output)'}\n\nExecution Time: ${data.executionTimeMs}ms | Peak Memory: ${Math.round(data.memoryUsedKb / 1024)}MB`);
+      } else {
+        setConsoleOutput(`[STANDARD OUTPUT]\n${data.stdout || '(no output)'}\n\nStatus: ${data.statusDescription}\nLatency: ${data.executionTimeMs}ms | Peak Memory: ${Math.round(data.memoryUsedKb / 1024)}MB`);
+      }
+    } catch (err: any) {
+      setConsoleOutput(`Execution failed: ${err.response?.data?.error?.message || err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Full Official Submission Evaluation
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setConsoleOutput('Queueing official solution for batch sandbox verification...');
     setActiveTab('console');
 
     try {
@@ -75,7 +119,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
         problemId: problem.id,
         language,
         code,
-        isTestRun
+        isTestRun: false
       });
 
       const submissionId = response.data.data.submissionId;
@@ -92,7 +136,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
             setIsSubmitting(false);
 
             if (subData.verdict === 'ACCEPTED') {
-              setConsoleOutput(`Verdict: ACCEPTED\nPassed: ${subData.testCasesPassed}/${subData.testCasesTotal}\nTime: ${subData.executionTimeMs}ms\nMemory: ${subData.memoryUsedKb}KB\nComposite Score: ${subData.compositeScore}`);
+              setConsoleOutput(`Verdict: ACCEPTED ✓\nPassed: ${subData.testCasesPassed}/${subData.testCasesTotal}\nTime: ${subData.executionTimeMs}ms\nMemory: ${subData.memoryUsedKb}KB\nComposite Score: ${subData.compositeScore}`);
             } else {
               setConsoleOutput(`Verdict: ${subData.verdict}\nPassed: ${subData.testCasesPassed}/${subData.testCasesTotal}\n${subData.compileOutput || 'Failed test verification.'}`);
             }
@@ -111,7 +155,22 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
     }
   };
 
-  const publicTestCases = problem.testCases || [];
+  // Keyboard Shortcuts (Ctrl+Enter to Run, Ctrl+Shift+Enter to Submit)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleSubmit();
+        } else {
+          e.preventDefault();
+          handleRunCustom();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [code, language, customStdin, activeTestIndex, activeTab]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl transition-colors duration-200">
@@ -141,17 +200,19 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handleSubmit(true)}
+            onClick={handleRunCustom}
             disabled={isSubmitting || isStreaming}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold disabled:opacity-50 transition"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
+            title="Run against custom or public input (Ctrl+Enter)"
           >
             <Play className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
             Run Code
           </button>
           <button
-            onClick={() => handleSubmit(false)}
+            onClick={handleSubmit}
             disabled={isSubmitting || isStreaming}
-            className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 disabled:opacity-50 transition"
+            className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 disabled:opacity-50 transition cursor-pointer"
+            title="Submit for full verification & ranking (Ctrl+Shift+Enter)"
           >
             <Send className="w-3.5 h-3.5" />
             Submit Solution
@@ -204,7 +265,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
         <div className="flex items-center gap-4 px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-xs font-medium">
           <button
             onClick={() => setActiveTab('tests')}
-            className={`flex items-center gap-1.5 pb-1 ${
+            className={`flex items-center gap-1.5 pb-1 cursor-pointer transition ${
               activeTab === 'tests'
                 ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 font-semibold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -214,8 +275,19 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
             Test Cases ({publicTestCases.length})
           </button>
           <button
+            onClick={() => setActiveTab('custom')}
+            className={`flex items-center gap-1.5 pb-1 cursor-pointer transition ${
+              activeTab === 'custom'
+                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 font-semibold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            Custom Input
+          </button>
+          <button
             onClick={() => setActiveTab('console')}
-            className={`flex items-center gap-1.5 pb-1 ${
+            className={`flex items-center gap-1.5 pb-1 cursor-pointer transition ${
               activeTab === 'console'
                 ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 font-semibold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -234,7 +306,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
                   <button
                     key={tc.id || idx}
                     onClick={() => setActiveTestIndex(idx)}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold ${
+                    className={`px-3 py-1 rounded-md text-xs font-semibold cursor-pointer ${
                       activeTestIndex === idx
                         ? 'bg-slate-200 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-300 dark:border-slate-700'
                         : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-transparent'
@@ -248,15 +320,29 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
               {publicTestCases[activeTestIndex] && (
                 <div className="grid grid-cols-2 gap-4 mt-2">
                   <div className="bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <span className="text-slate-500 dark:text-slate-400 block mb-1 font-sans text-xs">Standard Input (stdin):</span>
+                    <span className="text-slate-500 dark:text-slate-400 block mb-1 font-sans text-xs font-semibold">Standard Input (stdin):</span>
                     <pre className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{publicTestCases[activeTestIndex].input}</pre>
                   </div>
                   <div className="bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <span className="text-slate-500 dark:text-slate-400 block mb-1 font-sans text-xs">Expected Output:</span>
+                    <span className="text-slate-500 dark:text-slate-400 block mb-1 font-sans text-xs font-semibold">Expected Output:</span>
                     <pre className="text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap">{publicTestCases[activeTestIndex].expectedOutput}</pre>
                   </div>
                 </div>
               )}
+            </div>
+          ) : activeTab === 'custom' ? (
+            <div className="space-y-2 h-full flex flex-col">
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 font-sans text-xs font-medium">
+                <span>Enter custom input stream (stdin):</span>
+                <span className="text-[11px] text-slate-400 font-normal">Press Ctrl+Enter to execute in sandbox</span>
+              </div>
+              <textarea
+                value={customStdin}
+                onChange={(e) => setCustomStdin(e.target.value)}
+                placeholder="Paste or write custom stdin lines here..."
+                rows={3}
+                className="flex-1 w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+              />
             </div>
           ) : (
             <div>
@@ -264,7 +350,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
                 <pre className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">{consoleOutput}</pre>
               ) : (
                 <div className="text-slate-400 dark:text-slate-500 italic py-4 text-center font-sans">
-                  Click &quot;Run Code&quot; or &quot;Submit Solution&quot; to inspect isolated Judge0 stdout, stderr, and execution telemetry.
+                  Click &quot;Run Code&quot; (Ctrl+Enter) or &quot;Submit Solution&quot; (Ctrl+Shift+Enter) to inspect isolated Judge0 stdout, stderr, and execution telemetry.
                 </div>
               )}
             </div>

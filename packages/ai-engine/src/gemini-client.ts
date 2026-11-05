@@ -2,12 +2,15 @@ import { GoogleGenAI } from '@google/genai';
 import {
   OptimizationResponseSchema,
   DiagnosticResponseSchema,
-  ComparisonResponseSchema
+  ComparisonResponseSchema,
+  ClarificationResponseSchema,
+  ProblemGenerationResponseSchema
 } from './parsers/ai-response.parser.js';
 import { buildOptimizationPrompt, OptimizationPromptContext } from './prompts/optimization.prompt.js';
 import { buildDiagnosticPrompt, DiagnosticPromptContext } from './prompts/diagnostic.prompt.js';
 import { buildComparisonPrompt, ComparisonPromptContext } from './prompts/comparison.prompt.js';
-import { AIAnalysisReport, SolutionComparison } from '@aica/shared';
+import { buildClarificationPrompt, buildProblemGenerationPrompt } from './prompts/problem-creator.prompt.js';
+import { AIAnalysisReport, SolutionComparison, ProblemProposalGeneratedContent } from '@aica/shared';
 
 export class GeminiAnalysisClient {
   private ai: GoogleGenAI | null = null;
@@ -16,20 +19,44 @@ export class GeminiAnalysisClient {
   constructor(apiKey?: string, modelName = 'gemini-1.5-flash') {
     const key = apiKey || process.env.GEMINI_API_KEY;
     this.modelName = modelName;
-    if (key && key !== 'your_google_gemini_api_key_here') {
-      this.ai = new GoogleGenAI({ apiKey: key });
+    if (key && key !== 'your_google_gemini_api_key_here' && key.trim().length > 5) {
+      this.ai = new GoogleGenAI({ apiKey: key.trim() });
     }
   }
 
-  public async analyzeAcceptedSolution(ctx: OptimizationPromptContext): Promise<Partial<AIAnalysisReport>> {
-    const prompt = buildOptimizationPrompt(ctx);
+  private async executeWithRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
+    let lastError: any;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        lastError = err;
+        const isRateLimit =
+          err?.status === 429 ||
+          err?.message?.includes('429') ||
+          err?.message?.includes('Resource has been exhausted');
 
+        if (isRateLimit && attempt < maxRetries) {
+          const delayMs = (attempt + 1) * 2000;
+          console.warn(`[GeminiClient] Rate limit encountered. Retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError;
+  }
+
+  public async analyzeAcceptedSolution(ctx: OptimizationPromptContext): Promise<Partial<AIAnalysisReport>> {
     if (!this.ai) {
-      return this.getMockOptimizationReport(ctx);
+      throw new Error('AI_CONFIG_ERROR: Google Gemini API key is missing. Set GEMINI_API_KEY in environment variables.');
     }
 
-    try {
-      const response = await this.ai.models.generateContent({
+    const prompt = buildOptimizationPrompt(ctx);
+
+    return this.executeWithRetry(async () => {
+      const response = await this.ai!.models.generateContent({
         model: this.modelName,
         contents: prompt,
         config: {
@@ -59,21 +86,18 @@ export class GeminiAnalysisClient {
         optimizationSuggestions: validated.optimizationSuggestions,
         generatedAt: new Date().toISOString()
       };
-    } catch (err: any) {
-      console.error('[GeminiClient] Optimization analysis error:', err.message);
-      return this.getMockOptimizationReport(ctx);
-    }
+    });
   }
 
   public async analyzeDiagnosticSolution(ctx: DiagnosticPromptContext): Promise<Partial<AIAnalysisReport>> {
-    const prompt = buildDiagnosticPrompt(ctx);
-
     if (!this.ai) {
-      return this.getMockDiagnosticReport(ctx);
+      throw new Error('AI_CONFIG_ERROR: Google Gemini API key is missing. Set GEMINI_API_KEY in environment variables.');
     }
 
-    try {
-      const response = await this.ai.models.generateContent({
+    const prompt = buildDiagnosticPrompt(ctx);
+
+    return this.executeWithRetry(async () => {
+      const response = await this.ai!.models.generateContent({
         model: this.modelName,
         contents: prompt,
         config: {
@@ -104,26 +128,18 @@ export class GeminiAnalysisClient {
         optimizationSuggestions: [],
         generatedAt: new Date().toISOString()
       };
-    } catch (err: any) {
-      console.error('[GeminiClient] Diagnostic analysis error:', err.message);
-      return this.getMockDiagnosticReport(ctx);
-    }
+    });
   }
 
   public async analyzeComparison(ctx: ComparisonPromptContext): Promise<any> {
-    const prompt = buildComparisonPrompt(ctx);
-
     if (!this.ai) {
-      return {
-        timeComplexityComparison: 'Solution A vs Solution B trade-off analysis',
-        spaceComplexityComparison: 'Auxiliary memory comparison',
-        tradeOffSummary: 'Solution B optimizes algorithmic runtime through alternative indexing.',
-        architecturalEvolution: 'Evolved from nested iterations to linear hash lookup.'
-      };
+      throw new Error('AI_CONFIG_ERROR: Google Gemini API key is missing. Set GEMINI_API_KEY in environment variables.');
     }
 
-    try {
-      const response = await this.ai.models.generateContent({
+    const prompt = buildComparisonPrompt(ctx);
+
+    return this.executeWithRetry(async () => {
+      const response = await this.ai!.models.generateContent({
         model: this.modelName,
         contents: prompt,
         config: {
@@ -133,68 +149,72 @@ export class GeminiAnalysisClient {
 
       const rawText = response.text || '{}';
       return ComparisonResponseSchema.parse(JSON.parse(rawText));
-    } catch (err: any) {
-      console.error('[GeminiClient] Comparison error:', err.message);
-      return {
-        timeComplexityComparison: 'Comparative complexity computed',
-        spaceComplexityComparison: 'Auxiliary memory evaluated',
-        tradeOffSummary: 'Solution B reduces asymptotic time complexity.',
-        architecturalEvolution: 'Refactored approach.'
-      };
+    });
+  }
+
+  public async analyzeClarification(prompt: string): Promise<{
+    isClearAndComplete: boolean;
+    missingInformationSummary?: string;
+    clarifications: Array<{ id: string; question: string; options?: string[] }>;
+  }> {
+    if (!this.ai) {
+      throw new Error('AI_CONFIG_ERROR: Google Gemini API key is missing. Set GEMINI_API_KEY in environment variables.');
     }
+
+    const fullPrompt = buildClarificationPrompt({ prompt });
+
+    return this.executeWithRetry(async () => {
+      const response = await this.ai!.models.generateContent({
+        model: this.modelName,
+        contents: fullPrompt,
+        config: { responseMimeType: 'application/json' }
+      });
+
+      const parsed = JSON.parse(response.text || '{}');
+      return ClarificationResponseSchema.parse(parsed);
+    });
   }
 
-  private getMockOptimizationReport(ctx: OptimizationPromptContext): Partial<AIAnalysisReport> {
-    return {
-      status: 'COMPLETED',
-      mode: 'OPTIMIZATION',
-      codeSummary: `Solution implements an algorithm in ${ctx.language}.`,
-      theoreticalComplexity: {
-        timeComplexity: 'O(N)',
-        spaceComplexity: 'O(N)',
-        explanation: 'Linear scan with hash map auxiliary storage.'
-      },
-      codeQuality: {
-        score: 8,
-        readabilityAnalysis: 'Code is concise and uses idiomatic structures.',
-        codeSmells: [],
-        positivePractices: ['Clear variable naming', 'Early exit condition']
-      },
-      optimizationSuggestions: [
-        {
-          title: 'Memory Allocation Optimization',
-          rationale: 'Pre-allocate capacity where supported to prevent dynamic array reallocation.',
-          expectedTimeImpact: '~5-10% latency reduction',
-          refactoredSnippet: '// Allocate with known upper bound'
-        }
-      ],
-      generatedAt: new Date().toISOString()
-    };
-  }
+  public async generateProblemMaterials(
+    prompt: string,
+    clarifications?: Record<string, string>
+  ): Promise<ProblemProposalGeneratedContent> {
+    if (!this.ai) {
+      throw new Error('AI_CONFIG_ERROR: Google Gemini API key is missing. Set GEMINI_API_KEY in environment variables.');
+    }
 
-  private getMockDiagnosticReport(ctx: DiagnosticPromptContext): Partial<AIAnalysisReport> {
-    return {
-      status: 'COMPLETED',
-      mode: 'DIAGNOSTIC',
-      codeSummary: `Student logic attempted in ${ctx.language}.`,
-      theoreticalComplexity: {
-        timeComplexity: 'O(N^2)',
-        spaceComplexity: 'O(1)',
-        explanation: 'Nested loops over the input collection.'
-      },
-      codeQuality: {
-        score: 6,
-        readabilityAnalysis: 'Readable baseline structure.',
-        codeSmells: ['High complexity nested iterations'],
-        positivePractices: []
-      },
-      diagnosticFeedback: {
-        rootCauseBug: `The solution encountered ${ctx.verdict}. Logical conditions fail to handle boundary constraints or timeout limits.`,
-        edgeCaseVulnerability: 'Check for empty inputs, negative values, or duplicate keys in lookups.',
-        socraticHint: 'Could you use an auxiliary data structure like a Hash Map to look up complements in O(1) time instead of re-scanning?'
-      },
-      optimizationSuggestions: [],
-      generatedAt: new Date().toISOString()
-    };
+    const fullPrompt = buildProblemGenerationPrompt({ prompt, clarifications });
+
+    return this.executeWithRetry(async () => {
+      const response = await this.ai!.models.generateContent({
+        model: this.modelName,
+        contents: fullPrompt,
+        config: { responseMimeType: 'application/json' }
+      });
+
+      const parsed = JSON.parse(response.text || '{}');
+      const validated = ProblemGenerationResponseSchema.parse(parsed);
+
+      return {
+        title: validated.title,
+        slug: validated.slug,
+        difficulty: validated.difficulty,
+        tags: validated.tags,
+        description: validated.description,
+        constraints: validated.constraints,
+        examples: validated.examples,
+        starterCode: validated.starterCode,
+        referenceSolutions: validated.referenceSolutions,
+        testCases: validated.testCases.map((tc, idx) => ({
+          id: tc.id || `tc-${idx + 1}`,
+          input: tc.input,
+          expectedOutput: tc.expectedOutput,
+          isPublic: tc.isPublic ?? idx < 2,
+          isEdgeCase: tc.isEdgeCase ?? false,
+          explanation: tc.explanation,
+          weight: 1.0
+        }))
+      };
+    });
   }
 }
