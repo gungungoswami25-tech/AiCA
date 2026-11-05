@@ -16,6 +16,15 @@ const TestCaseSchema = new Schema<TestCase>({
 const ProblemSchema = new Schema<ProblemDocument>({
   title: { type: String, required: true, trim: true },
   slug: { type: String, required: true, unique: true, index: true },
+  status: {
+    type: String,
+    enum: ['UNPUBLISHED', 'PUBLISHED', 'DEPRECATED', 'ARCHIVED'],
+    default: 'UNPUBLISHED', // Safe default: new problems are never exposed publicly before approval
+    required: true,
+    index: true
+  },
+  version: { type: Number, default: 1, required: true },
+  sourceProposalId: { type: String, unique: true, sparse: true, index: true },
   difficulty: {
     type: String,
     enum: ['EASY', 'MEDIUM', 'HARD'],
@@ -64,5 +73,6 @@ const ProblemSchema = new Schema<ProblemDocument>({
 
 // Compound indexes
 ProblemSchema.index({ difficulty: 1, tags: 1 });
+ProblemSchema.index({ status: 1, difficulty: 1, createdAt: -1 });
 
 export const ProblemModel = mongoose.model<ProblemDocument>('Problem', ProblemSchema);

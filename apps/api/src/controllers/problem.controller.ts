@@ -29,7 +29,10 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
     const skip = (page - 1) * limit;
 
-    const filter: Record<string, any> = {};
+    const filter: Record<string, any> = {
+      // Only serve PUBLISHED problems to general catalog (or unmigrated legacy problems during migration window)
+      status: { $in: ['PUBLISHED', null] }
+    };
 
     if (req.query.difficulty) {
       filter.difficulty = (req.query.difficulty as string).toUpperCase();
@@ -92,8 +95,8 @@ export async function getProblemById(req: Request, res: Response): Promise<void>
     // Zero-Leakage Guarantee: filter out all testCases where isPublic is false!
     const problem: any = await ProblemModel.findById(id).lean();
 
-    if (!problem) {
-      res.status(404).json(createErrorResponse('NOT_FOUND', 'Problem not found'));
+    if (!problem || (problem.status === 'UNPUBLISHED' && req.user?.role !== 'ADMIN')) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'Problem not found or unpublished'));
       return;
     }
 
