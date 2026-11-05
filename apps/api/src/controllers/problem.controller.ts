@@ -1,3 +1,4 @@
+
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { ProblemModel } from '../models/mongodb/problem.model.js';
@@ -75,11 +76,14 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
 
     const [problems, total] = await Promise.all([
       ProblemModel.find(filter)
-        .select('title slug difficulty tags totalSubmissions acceptedSubmissions')
+        .select(
+          'title slug difficulty tags totalSubmissions acceptedSubmissions'
+        )
         .skip(skip)
         .limit(limit)
         .sort(sortOption)
         .lean(),
+
       ProblemModel.countDocuments(filter)
     ]);
 
@@ -138,6 +142,7 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
         }
       })
     );
+
   } catch (err: any) {
     console.error('[ProblemController] getProblems error:', err.message);
     res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problems', [{ issue: err.message }]));
@@ -177,20 +182,26 @@ export async function getProblemById(req: Request, res: Response): Promise<void>
         isPublic: true
       }));
 
-    const sanitizedProblem = {
+    const sanitizedProblem: any = {
       ...problem,
       id: problem._id.toString(),
       testCases: publicTestCases,
+
       acceptanceRate:
         problem.totalSubmissions > 0
-          ? Math.round((problem.acceptedSubmissions / problem.totalSubmissions) * 1000) / 10
+          ? Math.round(
+              (problem.acceptedSubmissions / problem.totalSubmissions) * 1000
+            ) / 10
           : 0
     };
 
     delete sanitizedProblem._id;
     delete sanitizedProblem.__v;
 
-    res.status(200).json(createSuccessResponse(sanitizedProblem));
+    res.status(200).json(
+      createSuccessResponse(sanitizedProblem)
+    );
+
   } catch (err: any) {
     console.error('[ProblemController] getProblemById error:', err.message);
     res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problem', [{ issue: err.message }]));
@@ -201,17 +212,29 @@ export async function createProblem(req: Request, res: Response): Promise<void> 
   if (!checkMongoReady(res)) return;
 
   const parseResult = ProblemCreateSchema.safeParse(req.body);
+
   if (!parseResult.success) {
     res.status(422).json(
-      createErrorResponse('VALIDATION_ERROR', 'Invalid problem schema', [
-        { field: 'form', issue: parseResult.error.errors.map((e) => e.message).join(', ') }
-      ])
+      createErrorResponse(
+        'VALIDATION_ERROR',
+        'Invalid problem schema',
+        [
+          {
+            field: 'form',
+            issue: parseResult.error.errors
+              .map((e) => e.message)
+              .join(', ')
+          }
+        ]
+      )
     );
+
     return;
   }
 
   try {
     const data = parseResult.data;
+
     const userId = req.user?.id || 'admin';
 
     // Unique slug check
@@ -250,7 +273,13 @@ export async function createProblem(req: Request, res: Response): Promise<void> 
       createdBy: userId
     });
 
-    res.status(201).json(createSuccessResponse(newProblem, 'Problem created successfully'));
+    res.status(201).json(
+      createSuccessResponse(
+        newProblem,
+        'Problem created successfully'
+      )
+    );
+
   } catch (err: any) {
     console.error('[ProblemController] createProblem error:', err.message);
     res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create problem', [{ issue: err.message }]));

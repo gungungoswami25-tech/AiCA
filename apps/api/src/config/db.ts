@@ -5,20 +5,24 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { POSTGRES_SCHEMA_SQL } from '../models/postgres/schema.js';
-import { sanitizeRedisUrl, sanitizeDatabaseUrl, sanitizeMongoUri } from '@aica/shared';
+import { sanitizeMongoUri } from '@aica/shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load root .env first, then local .env if present
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+const rootEnvConfig = dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+// A blank exported variable should not mask a usable key saved in the root .env.
+if (!process.env.OPENAI_API_KEY?.trim() && rootEnvConfig.parsed?.OPENAI_API_KEY?.trim()) {
+  process.env.OPENAI_API_KEY = rootEnvConfig.parsed.OPENAI_API_KEY.trim();
+}
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
 // PostgreSQL Connection Pool
 const { Pool } = pg;
 const isProd = process.env.NODE_ENV === 'production';
-const rawDbUrl = sanitizeDatabaseUrl(process.env.DATABASE_URL);
+const rawDbUrl = process.env.DATABASE_URL?.trim();
 const hasDatabaseUrl = Boolean(rawDbUrl);
 
 export const pgPool = new Pool(
@@ -45,6 +49,23 @@ export const pgPool = new Pool(
 );
 
 // Redis Client Configuration with URL auto-sanitization & safe initialization
+function sanitizeRedisUrl(value?: string): string {
+  const candidate = value?.trim().replace(/^['"]|['"]$/g, '');
+  if (!candidate) return 'redis://localhost:6379';
+
+  try {
+    const url = new URL(candidate);
+    if (url.protocol === 'redis:' || url.protocol === 'rediss:') {
+      return url.toString();
+    }
+  } catch {
+    // Fall back to the local Redis instance for malformed URLs.
+  }
+
+  console.warn('[Redis] Warning: Invalid Redis URL; using localhost.');
+  return 'redis://localhost:6379';
+}
+
 const redisUrl = sanitizeRedisUrl(process.env.REDIS_URL);
 const isRedisTls = redisUrl.startsWith('rediss://');
 const redisOptions = {
@@ -108,7 +129,7 @@ export async function initializeDatabases(): Promise<void> {
       if (count === 0) {
         console.log('[AutoSeed] Problem catalog is empty. Auto-seeding default benchmark problems...');
         const { runSeed } = await import('../scripts/seed.js');
-        await runSeed(false);
+        await runSeed();
       }
     } catch (seedErr: any) {
       console.warn('[AutoSeed] Auto-seed warning:', seedErr.message);

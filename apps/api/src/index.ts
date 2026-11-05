@@ -1,3 +1,4 @@
+import algorithmRoutes from './routes/algorithm.routes.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -75,6 +76,7 @@ app.use('/api/v1/problem-proposals', problemProposalRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/leaderboards', leaderboardRoutes);
 app.use('/api/v1/comparisons', comparisonRoutes);
+app.use('/api/v1/algorithms', algorithmRoutes);
 
 // 404 Handler
 app.use((req, res) => {
