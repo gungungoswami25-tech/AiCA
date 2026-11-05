@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initializeDatabases } from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
 import problemRoutes from './routes/problem.routes.js';
@@ -11,6 +13,10 @@ import leaderboardRoutes from './routes/leaderboard.routes.js';
 import comparisonRoutes from './routes/comparison.routes.js';
 import { createSuccessResponse, createErrorResponse } from '@aica/shared';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
 const app = express();

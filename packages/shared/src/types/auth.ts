@@ -7,6 +7,8 @@ export interface User {
   username: string;
   role: UserRole;
   status: AccountStatus;
+  authProvider?: string;
+  googleId?: string;
   createdAt: string;
   updatedAt: string;
 }

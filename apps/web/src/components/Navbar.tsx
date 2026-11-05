@@ -3,7 +3,7 @@ import { Code2, Trophy, BarChart2, BookOpen, LogOut, User as UserIcon } from 'lu
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Navbar() {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, profile, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -53,8 +53,16 @@ export function Navbar() {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-3 ml-3 pl-3 border-l border-slate-800">
-              <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                <UserIcon className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-xs text-slate-400 flex items-center gap-1.5 font-mono">
+                {profile?.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={user?.username}
+                    className="w-5 h-5 rounded-full object-cover border border-indigo-500/30"
+                  />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-indigo-400" />
+                )}
                 {user?.username}
               </span>
               <button

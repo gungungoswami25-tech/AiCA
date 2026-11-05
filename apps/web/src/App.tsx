@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Navbar } from './components/Navbar';
 import { ProblemListPage } from './pages/ProblemListPage';
 import { WorkspacePage } from './pages/WorkspacePage';
@@ -7,6 +8,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { Sparkles, ArrowRight, ShieldCheck, Cpu, ArrowLeftRight } from 'lucide-react';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1000000000000-dummygoogleclientidforinitialization.apps.googleusercontent.com';
 
 function LandingPage() {
   return (
@@ -82,24 +85,26 @@ function LandingPage() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-        <Navbar />
-        <main className="flex-1 flex flex-col">
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/problems" element={<ProblemListPage />} />
-            <Route path="/workspace/:id" element={<WorkspacePage />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Routes>
-        </main>
-        <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500">
-          AI Code Evolution Lab &copy; 2026 &bull; Developed by Team AICA &bull; Monorepo Turbo + pnpm
-        </footer>
-      </div>
-    </BrowserRouter>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <BrowserRouter>
+        <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+          <Navbar />
+          <main className="flex-1 flex flex-col">
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/problems" element={<ProblemListPage />} />
+              <Route path="/workspace/:id" element={<WorkspacePage />} />
+              <Route path="/leaderboard" element={<LeaderboardPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+            </Routes>
+          </main>
+          <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500">
+            AI Code Evolution Lab &copy; 2026 &bull; Developed by Team AICA &bull; Monorepo Turbo + pnpm
+          </footer>
+        </div>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   );
 }

@@ -1,10 +1,17 @@
 import mongoose from 'mongoose';
 import argon2 from 'argon2';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { pgPool } from '../config/db.js';
 import { ProblemModel } from '../models/mongodb/problem.model.js';
 import { LANGUAGE_CONFIGS } from '@aica/shared';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 dotenv.config();
 
 export async function runSeed() {
@@ -13,6 +20,15 @@ export async function runSeed() {
   // 1. Seed PostgreSQL Users
   try {
     const client = await pgPool.connect();
+    
+    // Ensure schema is applied
+    const schemaPath = path.resolve(__dirname, '../models/postgres/schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const sql = fs.readFileSync(schemaPath, 'utf8');
+      await client.query(sql);
+      console.log('[Seed] Applied schema.sql successfully.');
+    }
+
     console.log('[Seed] Seeding PostgreSQL users...');
 
     const studentPass = await argon2.hash('DemoUser123!');
