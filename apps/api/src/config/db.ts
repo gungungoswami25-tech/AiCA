@@ -3,19 +3,21 @@ import mongoose from 'mongoose';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
 import { POSTGRES_SCHEMA_SQL } from '../models/postgres/schema.js';
+import { sanitizeRedisUrl, sanitizeDatabaseUrl, sanitizeMongoUri } from '@aica/shared';
 
 dotenv.config();
 
 // PostgreSQL Connection Pool
 const { Pool } = pg;
 const isProd = process.env.NODE_ENV === 'production';
-const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+const rawDbUrl = sanitizeDatabaseUrl(process.env.DATABASE_URL);
+const hasDatabaseUrl = Boolean(rawDbUrl);
 
 export const pgPool = new Pool(
   hasDatabaseUrl
     ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: isProd || process.env.DATABASE_URL?.includes('sslmode=require')
+        connectionString: rawDbUrl,
+        ssl: isProd || rawDbUrl?.includes('sslmode=require')
           ? { rejectUnauthorized: false }
           : false,
         max: 20,
@@ -34,8 +36,8 @@ export const pgPool = new Pool(
       }
 );
 
-// Redis Client Configuration
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+// Redis Client Configuration with URL auto-sanitization & safe initialization
+const redisUrl = sanitizeRedisUrl(process.env.REDIS_URL);
 const isRedisTls = redisUrl.startsWith('rediss://');
 const redisOptions = {
   maxRetriesPerRequest: null,
@@ -49,8 +51,17 @@ const redisOptions = {
   ...(isRedisTls ? { tls: { rejectUnauthorized: false } } : {})
 };
 
-export const redisClient = new Redis(redisUrl, redisOptions);
-export const redisSubscriber = new Redis(redisUrl, redisOptions);
+function createSafeRedis(url: string, opts: any): Redis {
+  try {
+    return new Redis(url, opts);
+  } catch (err: any) {
+    console.warn('[Redis] Warning: Error initializing Redis URL, falling back safely:', err.message);
+    return new Redis('redis://localhost:6379', { ...opts, lazyConnect: true });
+  }
+}
+
+export const redisClient = createSafeRedis(redisUrl, redisOptions);
+export const redisSubscriber = createSafeRedis(redisUrl, redisOptions);
 
 // Prevent unhandled error event crashes
 redisClient.on('error', (err) => {
@@ -74,9 +85,9 @@ export async function initializeDatabases(): Promise<void> {
     console.warn('[PostgreSQL] Warning: Connection deferred or offline:', err.message);
   }
 
-  // 2. Connect to MongoDB
+  // 2. Connect to MongoDB with sanitized URI
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/aica_lab';
+    const mongoUri = sanitizeMongoUri(process.env.MONGODB_URI);
     await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000
     });

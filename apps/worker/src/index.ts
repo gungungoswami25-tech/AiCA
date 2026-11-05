@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import { sanitizeMongoUri } from '@aica/shared';
 import { startSubmissionWorker } from './queue/submission.worker.js';
 
 dotenv.config();
@@ -7,7 +8,7 @@ dotenv.config();
 async function main() {
   console.log('[Worker Daemon] Initializing AI Code Evolution Lab Execution Worker...');
 
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/aica_lab';
+  const mongoUri = sanitizeMongoUri(process.env.MONGODB_URI);
   try {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
     console.log('[Worker Daemon] Connected to MongoDB document store.');

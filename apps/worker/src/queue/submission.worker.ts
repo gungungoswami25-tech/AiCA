@@ -5,10 +5,10 @@ import { Judge0Service } from '../services/judge0.service.js';
 import { TestEvaluatorService } from '../services/test-evaluator.js';
 import { ScoringService } from '../services/scoring.service.js';
 import { GeminiAnalysisClient } from '@aica/ai-engine';
-import { PipelineStatus, Verdict, SupportedLanguage } from '@aica/shared';
+import { PipelineStatus, Verdict, SupportedLanguage, sanitizeRedisUrl } from '@aica/shared';
 
-// Initialize Services with TLS support
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+// Initialize Services with TLS support & URL sanitization
+const redisUrl = sanitizeRedisUrl(process.env.REDIS_URL);
 const isRedisTls = redisUrl.startsWith('rediss://');
 const redisOptions = {
   maxRetriesPerRequest: null,
@@ -21,7 +21,16 @@ const redisOptions = {
   ...(isRedisTls ? { tls: { rejectUnauthorized: false } } : {})
 };
 
-const redisPublisher = new Redis(redisUrl, redisOptions);
+function createSafeRedis(url: string, opts: any): Redis {
+  try {
+    return new Redis(url, opts);
+  } catch (err: any) {
+    console.warn('[SubmissionWorker] Warning: Error initializing Redis URL, falling back safely:', err.message);
+    return new Redis('redis://localhost:6379', { ...opts, lazyConnect: true });
+  }
+}
+
+const redisPublisher = createSafeRedis(redisUrl, redisOptions);
 redisPublisher.on('error', (err) => {
   console.warn('[SubmissionWorker] Redis publisher warning (deferred):', err.message);
 });
@@ -54,7 +63,7 @@ async function publishProgress(
 }
 
 export function startSubmissionWorker(): Worker {
-  const connection = new Redis(redisUrl, {
+  const connection = createSafeRedis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     lazyConnect: true,
