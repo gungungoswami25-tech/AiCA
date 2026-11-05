@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { sanitizeMongoUri } from '@aica/shared';
 import { startSubmissionWorker } from './queue/submission.worker.js';
 
 const __filename = fileURLToPath(import.meta.url);
