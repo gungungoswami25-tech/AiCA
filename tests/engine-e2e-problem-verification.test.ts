@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TestEvaluatorService } from '../apps/worker/src/services/test-evaluator.js';
 import { ScoringService } from '../apps/worker/src/services/scoring.service.js';
 import { SandboxRunnerService } from '../apps/api/src/services/sandbox-runner.service.js';
@@ -41,6 +41,12 @@ class MockCollection {
 }
 
 describe('E2E Engine Problem Verification & Execution Pipeline', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
   // Test Problem Specifications
   const testProblems = {
     palindrome: {
@@ -146,7 +152,7 @@ describe('E2E Engine Problem Verification & Execution Pipeline', () => {
       const initialCount = submissionsTracker.count();
 
       // Mock synchronous Judge0 response
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
           status: { id: 3, description: 'Accepted' },
@@ -179,7 +185,7 @@ describe('E2E Engine Problem Verification & Execution Pipeline', () => {
     it('should capture runtime exceptions in custom run cleanly with stderr', async () => {
       const runner = new SandboxRunnerService('http://mock-judge0:2358');
 
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
           status: { id: 11, description: 'Runtime Error (NZEC)' },
