@@ -32,6 +32,8 @@ export function WorkspacePage() {
         id: problemId,
         title: 'Two Sum Optimal',
         slug: 'two-sum-optimal',
+        status: 'PUBLISHED',
+        version: 1,
         difficulty: 'EASY',
         tags: ['Arrays', 'Hash-Table'],
         description: `Given an array of integers \`nums\` and an integer \`target\`, return *indices of the two numbers such that they add up to \`target\`*.\n\nYou may assume that each input would have ***exactly one solution***, and you may not use the same element twice.`,

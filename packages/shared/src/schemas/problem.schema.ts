@@ -36,3 +36,27 @@ export const ProblemCreateSchema = z.object({
 });
 
 export type ProblemCreateDto = z.infer<typeof ProblemCreateSchema>;
+
+export const ProblemProposalCreateSchema = z.object({
+  prompt: z.string().min(10, 'Problem description must be at least 10 characters long').max(2000, 'Problem description cannot exceed 2000 characters')
+});
+
+export type ProblemProposalCreateDto = z.infer<typeof ProblemProposalCreateSchema>;
+
+export const ProblemProposalClarifySchema = z.object({
+  answers: z.record(z.string())
+});
+
+export type ProblemProposalClarifyDto = z.infer<typeof ProblemProposalClarifySchema>;
+
+export const AdminProposalApproveSchema = z.object({
+  decisionNotes: z.string().max(500).optional()
+});
+
+export type AdminProposalApproveDto = z.infer<typeof AdminProposalApproveSchema>;
+
+export const AdminProposalRejectSchema = z.object({
+  reason: z.string().min(5, 'Rejection reason must be at least 5 characters').max(500)
+});
+
+export type AdminProposalRejectDto = z.infer<typeof AdminProposalRejectSchema>;

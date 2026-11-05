@@ -4,6 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { sanitizeMongoUri } from '@aica/shared';
 import { startSubmissionWorker } from './queue/submission.worker.js';
+import { startProblemGenerationWorker } from './queue/problem-generation.worker.js';
+import { startProblemValidationWorker } from './queue/problem-validation.worker.js';
+import { startAuditReconcilerWorker } from './queue/audit-reconciler.worker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,22 +26,20 @@ async function main() {
   }
 
   const worker = startSubmissionWorker();
+  const problemGenWorker = startProblemGenerationWorker();
+  const problemValWorker = startProblemValidationWorker();
+  const auditWorker = startAuditReconcilerWorker();
 
-  worker.on('ready', () => {
-    console.log('[Worker Daemon] BullMQ submission-queue worker is active and awaiting jobs.');
-  });
-
-  worker.on('error', (err) => {
-    console.warn('[Worker Daemon] Worker warning (deferred):', err.message);
-  });
-
-  worker.on('failed', (job, err) => {
-    console.error(`[Worker Daemon] Job ${job?.id} failed:`, err.message);
-  });
+  console.log('[Worker Daemon] All BullMQ workers (submissions, problem-generation, differential-validation, audit-reconciler) are active.');
 
   process.on('SIGTERM', async () => {
     console.log('[Worker Daemon] Shutting down gracefully...');
-    await worker.close();
+    await Promise.all([
+      worker.close(),
+      problemGenWorker.close(),
+      problemValWorker.close(),
+      auditWorker.close()
+    ]);
     await mongoose.disconnect();
     process.exit(0);
   });

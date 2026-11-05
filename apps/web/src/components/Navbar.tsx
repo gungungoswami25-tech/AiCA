@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow } from 'lucide-react';
+import { Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow, Sparkles, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Navbar() {
@@ -64,6 +64,22 @@ export function Navbar() {
                 <BarChart2 className="w-4 h-4 text-teal-600" />
                 Dashboard
               </Link>
+              <Link
+                to="/create-problem"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/80 text-xs sm:text-sm font-semibold transition"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                AI Creator
+              </Link>
+              {((user as any)?.role === 'ADMIN' || (user as any)?.role === 'INSTRUCTOR') && (
+                <Link
+                  to="/admin/proposals"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/80 text-xs sm:text-sm font-semibold transition"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                  Review
+                </Link>
+              )}
               <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
                 <Link
                   to="/profile"

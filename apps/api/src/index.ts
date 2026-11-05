@@ -11,6 +11,7 @@ import problemRoutes from './routes/problem.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
 import comparisonRoutes from './routes/comparison.routes.js';
+import problemProposalRoutes from './routes/problem-proposal.routes.js';
 import { createSuccessResponse, createErrorResponse } from '@aica/shared';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,6 +71,7 @@ app.get('/health', (_, res) => {
 // Mount Domain API Routes (v1)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/problems', problemRoutes);
+app.use('/api/v1/problem-proposals', problemProposalRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/leaderboards', leaderboardRoutes);
 app.use('/api/v1/comparisons', comparisonRoutes);

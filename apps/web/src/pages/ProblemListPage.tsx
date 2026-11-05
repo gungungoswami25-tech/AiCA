@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Search, ArrowRight, Tag } from 'lucide-react';
+import { BookOpen, Search, ArrowRight, Tag, Sparkles } from 'lucide-react';
 import { ProblemListItem, ProblemDifficulty } from '@aica/shared';
 import { api } from '../services/api';
 
@@ -88,21 +88,30 @@ export function ProblemListPage() {
           </p>
         </div>
 
-        {/* Filter Controls */}
-        <div className="flex items-center gap-2">
-          {['ALL', 'EASY', 'MEDIUM', 'HARD'].map((d) => (
-            <button
-              key={d}
-              onClick={() => setDifficulty(d)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                difficulty === d
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              {d}
-            </button>
-          ))}
+        {/* Filter Controls & Create CTA */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/create-problem"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30 transition"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+            Create with AI
+          </Link>
+          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            {['ALL', 'EASY', 'MEDIUM', 'HARD'].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDifficulty(d)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  difficulty === d
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
