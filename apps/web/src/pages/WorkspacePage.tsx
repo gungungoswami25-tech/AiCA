@@ -12,9 +12,10 @@ import {
   Clock,
   Code2,
   X,
-  Loader2
+  Loader2,
+  RotateCcw
 } from 'lucide-react';
-import { Problem, EvaluationReport, SolutionComparison, LANGUAGE_CONFIGS } from '@aica/shared';
+import { Problem, EvaluationReport, SolutionComparison, SupportedLanguage, LANGUAGE_CONFIGS } from '@aica/shared';
 import { MonacoWorkspace } from '../components/MonacoWorkspace';
 import { EvaluationReportView } from '../components/EvaluationReportView';
 import { SolutionComparisonView } from '../components/SolutionComparisonView';
@@ -30,6 +31,15 @@ export function WorkspacePage() {
   const [pastSubmissions, setPastSubmissions] = useState<any[]>([]);
   const [loadingPastSubmissions, setLoadingPastSubmissions] = useState(false);
   const [inspectedCode, setInspectedCode] = useState<{ code: string; language: string; verdict: string; date: string } | null>(null);
+  const [loadedCode, setLoadedCode] = useState<{ code: string; language: SupportedLanguage } | null>(null);
+
+  const handleLoadIntoEditor = (submission: { code: string; language: string }) => {
+    if (!problem?.id) return;
+    const lang = (submission.language || 'python') as SupportedLanguage;
+    localStorage.setItem(`draft_${problem.id}_${lang}`, submission.code);
+    setLoadedCode({ code: submission.code, language: lang });
+    setInspectedCode(null);
+  };
 
   useEffect(() => {
     if (id) {
@@ -369,6 +379,7 @@ export function WorkspacePage() {
           <MonacoWorkspace
             problem={problem}
             onEvaluationComplete={handleEvaluationComplete}
+            loadedCode={loadedCode}
           />
         </div>
       </div>
@@ -401,12 +412,21 @@ export function WorkspacePage() {
             </div>
             <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
               <span>Submitted: {inspectedCode.date}</span>
-              <button
-                onClick={() => setInspectedCode(null)}
-                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold cursor-pointer hover:bg-indigo-500"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleLoadIntoEditor(inspectedCode)}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Load into Editor
+                </button>
+                <button
+                  onClick={() => setInspectedCode(null)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold cursor-pointer transition"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

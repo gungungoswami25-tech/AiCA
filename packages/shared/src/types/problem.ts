@@ -2,6 +2,7 @@ import { SupportedLanguage } from '../constants/languages.js';
 
 export type ProblemDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type ProblemLifecycleStatus = 'UNPUBLISHED' | 'PUBLISHED' | 'DEPRECATED' | 'ARCHIVED';
+export type ProblemSortOption = 'latest' | 'difficulty_asc' | 'difficulty_desc' | 'title_asc';
 
 export type ProposalStatus =
   | 'DRAFT'

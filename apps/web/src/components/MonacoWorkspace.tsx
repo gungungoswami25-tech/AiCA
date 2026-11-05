@@ -28,9 +28,10 @@ import { useThemeStore } from '../store/useThemeStore';
 interface MonacoWorkspaceProps {
   problem: Problem;
   onEvaluationComplete?: (reportId: string, submissionId: string) => void;
+  loadedCode?: { code: string; language: SupportedLanguage } | null;
 }
 
-export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspaceProps) {
+export function MonacoWorkspace({ problem, onEvaluationComplete, loadedCode }: MonacoWorkspaceProps) {
   const { isDark } = useThemeStore();
   const [language, setLanguage] = useState<SupportedLanguage>('python');
   const [code, setCode] = useState<string>('');
@@ -67,6 +68,15 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
       setCode(defaultCode);
     }
   }, [problem, language]);
+
+  // Handle externally loaded submission code
+  useEffect(() => {
+    if (loadedCode) {
+      setLanguage(loadedCode.language);
+      setCode(loadedCode.code);
+      localStorage.setItem(`draft_${problem.id}_${loadedCode.language}`, loadedCode.code);
+    }
+  }, [loadedCode, problem.id]);
 
   // Handle Code Change & Draft Saving
   const handleCodeChange = (value?: string) => {
