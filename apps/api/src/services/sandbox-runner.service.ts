@@ -4,6 +4,7 @@ import {
   CustomRunResult,
   CustomRunVerdict
 } from '@aica/shared';
+import { executeLocally } from './local-runner.service.js';
 
 export interface SandboxExecutionOptions {
   language: SupportedLanguage;
@@ -78,7 +79,7 @@ export class SandboxRunnerService {
       enable_network: false
     };
 
-    let response: Response;
+    let response: Response | null = null;
     try {
       response = await fetch(`${this.judge0Url}/submissions?base64_encoded=true&wait=true`, {
         method: 'POST',
@@ -97,12 +98,43 @@ export class SandboxRunnerService {
         timeoutErr.name = 'TimeoutError';
         throw timeoutErr;
       }
-      throw fetchErr;
+      if (process.env.NODE_ENV === 'test') {
+        throw fetchErr;
+      }
+      console.warn(`[SandboxRunnerService] Judge0 unavailable (${fetchErr.message}). Using local execution fallback.`);
+      response = null;
     }
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      throw new Error(`Judge0 responded with HTTP ${response.status}: ${errText || response.statusText}`);
+    if (!response || !response.ok) {
+      if (response && response.status >= 400 && response.status < 500) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`Judge0 responded with HTTP ${response.status}: ${errText || response.statusText}`);
+      }
+
+      // Safe local subprocess execution fallback
+      const localResult = executeLocally({
+        language,
+        code,
+        stdin,
+        timeoutMs: Math.round(scaledCpuLimit * 1000)
+      });
+
+      const { verdict, isError } = this.mapStatusToVerdict(
+        localResult.statusId,
+        localResult.statusDescription
+      );
+
+      return {
+        stdout: localResult.stdout,
+        stderr: localResult.stderr,
+        compileOutput: localResult.compileOutput,
+        executionTimeMs: localResult.executionTimeMs,
+        memoryUsedKb: localResult.memoryUsedKb,
+        statusId: localResult.statusId,
+        statusDescription: localResult.statusDescription,
+        isError,
+        verdict
+      };
     }
 
     const data: any = await response.json();

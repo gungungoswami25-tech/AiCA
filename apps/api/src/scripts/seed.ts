@@ -195,10 +195,10 @@ You can return the answer in any order.`,
           javaMultiplier: 2.0
         },
         starterCode: {
-          python: `def twoSum(nums: list[int], target: int) -> list[int]:\n    # Implement O(N) hash map solution here\n    pass\n`,
-          javascript: `function twoSum(nums, target) {\n    // Implement O(N) hash map solution here\n    return [];\n}\n`,
-          cpp: `#include <vector>\n#include <unordered_map>\n\nstd::vector<int> twoSum(std::vector<int>& nums, int target) {\n    // Implement O(N) hash map solution here\n    return {};\n}\n`,
-          java: `import java.util.*;\n\nclass Solution {\n    public int[] twoSum(int[] nums, int target) {\n        // Implement O(N) hash map solution here\n        return new int[]{};\n    }\n}\n`
+          python: `import sys\n\ndef twoSum(nums: list[int], target: int) -> list[int]:\n    # Implement O(N) hash map solution here\n    pass\n\nif __name__ == '__main__':\n    lines = sys.stdin.read().split()\n    if len(lines) >= 3:\n        n = int(lines[0])\n        nums = [int(x) for x in lines[1:n+1]]\n        target = int(lines[n+1])\n        res = twoSum(nums, target)\n        if res and len(res) >= 2:\n            print(f"{res[0]} {res[1]}")\n`,
+          javascript: `const fs = require('fs');\n\nfunction twoSum(nums, target) {\n    // Implement O(N) hash map solution here\n    return [];\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);\nif (input.length >= 3) {\n    const n = parseInt(input[0], 10);\n    const nums = input.slice(1, n + 1).map(Number);\n    const target = parseInt(input[n + 1], 10);\n    const res = twoSum(nums, target);\n    if (res && res.length >= 2) console.log(res.join(' '));\n}\n`,
+          cpp: `#include <iostream>\n#include <vector>\n#include <unordered_map>\n\nusing namespace std;\n\nvector<int> twoSum(vector<int>& nums, int target) {\n    // Implement O(N) hash map solution here\n    return {};\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> nums(n);\n        for (int i = 0; i < n; i++) cin >> nums[i];\n        int target;\n        cin >> target;\n        vector<int> res = twoSum(nums, target);\n        if (res.size() >= 2) cout << res[0] << " " << res[1] << endl;\n    }\n    return 0;\n}\n`,
+          java: `import java.util.*;\n\npublic class Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        // Implement O(N) hash map solution here\n        return new int[]{};\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] nums = new int[n];\n            for (int i = 0; i < n; i++) nums[i] = sc.nextInt();\n            int target = sc.nextInt();\n            int[] res = twoSum(nums, target);\n            if (res != null && res.length >= 2) System.out.println(res[0] + " " + res[1]);\n        }\n    }\n}\n`
         },
         testCases: [
           {
@@ -280,10 +280,10 @@ You can return the answer in any order.`,
           javaMultiplier: 2.0
         },
         starterCode: {
-          python: `def lengthOfLongestSubstring(s: str) -> int:\n    # Implement sliding window here\n    return 0\n`,
-          javascript: `function lengthOfLongestSubstring(s) {\n    // Implement sliding window here\n    return 0;\n}\n`,
-          cpp: `#include <string>\n#include <unordered_set>\n\nint lengthOfLongestSubstring(std::string s) {\n    return 0;\n}\n`,
-          java: `class Solution {\n    public int lengthOfLongestSubstring(String s) {\n        return 0;\n    }\n}\n`
+          python: `import sys\n\ndef lengthOfLongestSubstring(s: str) -> int:\n    # Implement sliding window here\n    return 0\n\nif __name__ == '__main__':\n    s = sys.stdin.read().rstrip('\\r\\n')\n    print(lengthOfLongestSubstring(s))\n`,
+          javascript: `const fs = require('fs');\n\nfunction lengthOfLongestSubstring(s) {\n    // Implement sliding window here\n    return 0;\n}\n\nconst s = fs.readFileSync(0, 'utf-8').replace(/[\\r\\n]+$/, '');\nconsole.log(lengthOfLongestSubstring(s));\n`,
+          cpp: `#include <iostream>\n#include <string>\n#include <unordered_set>\n\nusing namespace std;\n\nint lengthOfLongestSubstring(string s) {\n    // Implement sliding window here\n    return 0;\n}\n\nint main() {\n    string s;\n    if (getline(cin, s)) {\n        cout << lengthOfLongestSubstring(s) << endl;\n    }\n    return 0;\n}\n`,
+          java: `import java.util.*;\n\npublic class Solution {\n    public static int lengthOfLongestSubstring(String s) {\n        // Implement sliding window here\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String s = sc.hasNextLine() ? sc.nextLine() : "";\n        System.out.println(lengthOfLongestSubstring(s));\n    }\n}\n`
         },
         testCases: [
           {
@@ -353,10 +353,10 @@ Return *the maximum amount of water a container can store*.`,
           javaMultiplier: 2.0
         },
         starterCode: {
-          python: `def maxArea(height: list[int]) -> int:\n    # Implement O(N) two pointers\n    return 0\n`,
-          javascript: `function maxArea(height) {\n    return 0;\n}\n`,
-          cpp: `#include <vector>\n\nint maxArea(std::vector<int>& height) {\n    return 0;\n}\n`,
-          java: `class Solution {\n    public int maxArea(int[] height) {\n        return 0;\n    }\n}\n`
+          python: `import sys\n\ndef maxArea(height: list[int]) -> int:\n    # Implement O(N) two pointers\n    return 0\n\nif __name__ == '__main__':\n    lines = sys.stdin.read().split()\n    if len(lines) >= 2:\n        n = int(lines[0])\n        h = [int(x) for x in lines[1:n+1]]\n        print(maxArea(h))\n`,
+          javascript: `const fs = require('fs');\n\nfunction maxArea(height) {\n    return 0;\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0], 10);\n    const nums = input.slice(1, n + 1).map(Number);\n    console.log(maxArea(nums));\n}\n`,
+          cpp: `#include <iostream>\n#include <vector>\n\nusing namespace std;\n\nint maxArea(vector<int>& height) {\n    return 0;\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> h(n);\n        for (int i = 0; i < n; i++) cin >> h[i];\n        cout << maxArea(h) << endl;\n    }\n    return 0;\n}\n`,
+          java: `import java.util.*;\n\npublic class Solution {\n    public static int maxArea(int[] height) {\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] h = new int[n];\n            for (int i = 0; i < n; i++) h[i] = sc.nextInt();\n            System.out.println(maxArea(h));\n        }\n    }\n}\n`
         },
         testCases: [
           {
@@ -417,10 +417,10 @@ An input string is valid if:
           javaMultiplier: 2.0
         },
         starterCode: {
-          python: `def isValid(s: str) -> bool:\n    # Implement stack solution here\n    pass\n`,
-          javascript: `function isValid(s) {\n    // Implement stack solution here\n    return false;\n}\n`,
-          cpp: `#include <string>\n#include <stack>\n\nbool isValid(std::string s) {\n    return false;\n}\n`,
-          java: `import java.util.*;\n\nclass Solution {\n    public boolean isValid(String s) {\n        return false;\n    }\n}\n`
+          python: `import sys\n\ndef isValid(s: str) -> bool:\n    # Implement stack solution here\n    pass\n\nif __name__ == '__main__':\n    s = sys.stdin.read().strip()\n    print('true' if isValid(s) else 'false')\n`,
+          javascript: `const fs = require('fs');\n\nfunction isValid(s) {\n    return false;\n}\n\nconst s = fs.readFileSync(0, 'utf-8').trim();\nconsole.log(isValid(s) ? 'true' : 'false');\n`,
+          cpp: `#include <iostream>\n#include <string>\n#include <stack>\n\nusing namespace std;\n\nbool isValid(string s) {\n    return false;\n}\n\nint main() {\n    string s;\n    if (cin >> s) {\n        cout << (isValid(s) ? "true" : "false") << endl;\n    }\n    return 0;\n}\n`,
+          java: `import java.util.*;\n\npublic class Solution {\n    public static boolean isValid(String s) {\n        return false;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String s = sc.hasNext() ? sc.next() : "";\n        System.out.println(isValid(s) ? "true" : "false");\n    }\n}\n`
         },
         testCases: [
           {
@@ -503,10 +503,10 @@ You must write an algorithm with \`O(log n)\` runtime complexity.`,
           javaMultiplier: 2.0
         },
         starterCode: {
-          python: `def search(nums: list[int], target: int) -> int:\n    # Implement O(log N) binary search\n    pass\n`,
-          javascript: `function search(nums, target) {\n    // Implement O(log N) binary search\n    return -1;\n}\n`,
-          cpp: `#include <vector>\n\nint search(std::vector<int>& nums, int target) {\n    return -1;\n}\n`,
-          java: `class Solution {\n    public int search(int[] nums, int target) {\n        return -1;\n    }\n}\n`
+          python: `import sys\n\ndef search(nums: list[int], target: int) -> int:\n    # Implement O(log N) binary search\n    pass\n\nif __name__ == '__main__':\n    lines = sys.stdin.read().split()\n    if len(lines) >= 3:\n        n = int(lines[0])\n        nums = [int(x) for x in lines[1:n+1]]\n        target = int(lines[n+1])\n        print(search(nums, target))\n`,
+          javascript: `const fs = require('fs');\n\nfunction search(nums, target) {\n    return -1;\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);\nif (input.length >= 3) {\n    const n = parseInt(input[0], 10);\n    const nums = input.slice(1, n + 1).map(Number);\n    const target = parseInt(input[n + 1], 10);\n    console.log(search(nums, target));\n}\n`,
+          cpp: `#include <iostream>\n#include <vector>\n\nusing namespace std;\n\nint search(vector<int>& nums, int target) {\n    return -1;\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> nums(n);\n        for (int i = 0; i < n; i++) cin >> nums[i];\n        int target;\n        cin >> target;\n        cout << search(nums, target) << endl;\n    }\n    return 0;\n}\n`,
+          java: `import java.util.*;\n\npublic class Solution {\n    public static int search(int[] nums, int target) {\n        return -1;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] nums = new int[n];\n            for (int i = 0; i < n; i++) nums[i] = sc.nextInt();\n            int target = sc.nextInt();\n            System.out.println(search(nums, target));\n        }\n    }\n}\n`
         },
         testCases: [
           {

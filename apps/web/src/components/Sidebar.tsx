@@ -64,7 +64,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     },
     {
       label: 'Code Lab',
-      path: '/workspace/1',
+      path: '/workspace/two-sum-optimal',
       icon: Terminal,
       requiresAuth: false,
     },
@@ -121,12 +121,17 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
 
   const handleNavigate = (path: string) => {
     setIsProfilePopupOpen(false);
-    navigate(path);
+    if (path.startsWith('/workspace')) {
+      const lastActive = localStorage.getItem('last_active_problem');
+      navigate(lastActive ? `/workspace/${lastActive}` : '/workspace/two-sum-optimal');
+    } else {
+      navigate(path);
+    }
     if (onCloseMobile) onCloseMobile();
   };
 
   const isActive = (path: string) => {
-    if (path === '/workspace/1') {
+    if (path.startsWith('/workspace')) {
       return location.pathname.startsWith('/workspace');
     }
     return location.pathname === path;

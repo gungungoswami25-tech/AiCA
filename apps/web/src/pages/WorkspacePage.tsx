@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
   Sparkles,
@@ -23,6 +23,7 @@ import { api } from '../services/api';
 
 export function WorkspacePage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLeftTab, setActiveLeftTab] = useState<'desc' | 'report' | 'compare' | 'submissions'>('desc');
@@ -76,9 +77,14 @@ export function WorkspacePage() {
 
   useEffect(() => {
     if (id) {
+      if (id === '1') {
+        navigate('/workspace/two-sum-optimal', { replace: true });
+        return;
+      }
+      localStorage.setItem('last_active_problem', id);
       fetchProblem(id);
     }
-  }, [id]);
+  }, [id, navigate]);
 
   const fetchProblem = async (problemId: string) => {
     setLoading(true);
