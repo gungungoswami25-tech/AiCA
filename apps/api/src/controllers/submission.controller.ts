@@ -5,11 +5,13 @@ import { ProblemModel } from '../models/mongodb/problem.model.js';
 import { EvaluationReportModel } from '../models/mongodb/evaluation-report.model.js';
 import {
   SubmissionRequestSchema,
+  CustomRunRequestSchema,
   createSuccessResponse,
   createErrorResponse,
   LANGUAGE_CONFIGS,
   SupportedLanguage
 } from '@aica/shared';
+import { SandboxRunnerService } from '../services/sandbox-runner.service.js';
 import { redisClient } from '../config/db.js';
 
 // BullMQ Queue Producer
@@ -187,6 +189,12 @@ export async function getEvaluationReport(req: Request, res: Response): Promise<
 export async function retryAiAnalysis(req: Request, res: Response): Promise<void> {
   const { submissionId } = req.params;
 
+  // 1. Authentication check
+  if (!req.user) {
+    res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication token required'));
+    return;
+  }
+
   try {
     const submission = await SubmissionModel.findById(submissionId);
     if (!submission) {
@@ -194,6 +202,18 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
       return;
     }
 
+    // 2. Ownership & Authorization check: Only submission owner or ADMIN can retry
+    const isOwner = req.user.id === submission.userId;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      res.status(403).json(
+        createErrorResponse('FORBIDDEN', 'You are not authorized to retry AI analysis for this submission')
+      );
+      return;
+    }
+
+    // 3. State validation: deterministic verdict must exist and not be CE
     if (submission.verdict === 'PENDING') {
       res.status(400).json(
         createErrorResponse(
@@ -214,6 +234,37 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
       return;
     }
 
+    // 4. Deduplication & Conflict check: Reject if already pending or processing
+    if (submission.aiStatus === 'PENDING') {
+      res.status(409).json(
+        createErrorResponse(
+          'CONFLICT',
+          'AI analysis is already pending or in progress for this submission'
+        )
+      );
+      return;
+    }
+
+    const jobId = `ai-analysis-${submissionId}`;
+
+    // Check BullMQ for active/waiting duplicate job and clean up retained completed/failed job
+    try {
+      const existingJob = await aiAnalysisQueue.getJob(jobId);
+      if (existingJob) {
+        const state = await existingJob.getState();
+        if (state === 'active' || state === 'waiting' || state === 'delayed') {
+          res.status(409).json(
+            createErrorResponse('CONFLICT', 'AI analysis job is currently active or queued')
+          );
+          return;
+        }
+        // Remove retained job so BullMQ accepts adding the job with the same deterministic jobId
+        await existingJob.remove();
+      }
+    } catch (qErr: any) {
+      console.warn('[SubmissionController] BullMQ job lookup warning:', qErr.message);
+    }
+
     // Mark AI status as PENDING
     await SubmissionModel.findByIdAndUpdate(submissionId, {
       aiStatus: 'PENDING',
@@ -225,7 +276,7 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
       { $set: { 'aiAnalysis.status': 'PENDING' } }
     );
 
-    // Enqueue to aiAnalysisQueue
+    // Enqueue to aiAnalysisQueue with deterministic jobId
     await aiAnalysisQueue.add(
       'analyze-submission-ai',
       {
@@ -244,6 +295,7 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
         isTestRun: submission.isTestRun
       },
       {
+        jobId,
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },
         removeOnComplete: 100,
@@ -395,69 +447,49 @@ export async function getActivityHeatmap(req: Request, res: Response): Promise<v
 }
 
 export async function runCustomCode(req: Request, res: Response): Promise<void> {
-  const { language, code, stdin = '' } = req.body;
-  if (!code || !language) {
-    res.status(400).json(createErrorResponse('VALIDATION_ERROR', 'Language and code are required'));
+  // 1. Authentication check
+  if (!req.user) {
+    res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication token required'));
     return;
   }
 
+  // 2. Schema validation (enforces non-empty code, max 64KB code, max 64KB stdin, supported language)
+  const parseResult = CustomRunRequestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const issues = parseResult.error.errors.map((e) => ({
+      field: e.path.join('.'),
+      issue: e.message
+    }));
+    res.status(400).json(
+      createErrorResponse(
+        'VALIDATION_ERROR',
+        parseResult.error.errors[0]?.message || 'Invalid custom execution payload',
+        issues
+      )
+    );
+    return;
+  }
+
+  const { language, code, stdin } = parseResult.data;
+
+  // 3. Supported language check
   const langConfig = LANGUAGE_CONFIGS[language as SupportedLanguage];
   if (!langConfig) {
     res.status(400).json(createErrorResponse('UNSUPPORTED_LANGUAGE', 'Selected language is not supported'));
     return;
   }
 
-  const judge0Url = (process.env.JUDGE0_API_URL || 'http://localhost:2358').replace(/\/+$/, '');
-  const apiKey = process.env.JUDGE0_API_KEY;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
-  };
-  if (apiKey) {
-    headers['X-RapidAPI-Key'] = apiKey;
-  }
-
   try {
-    const payload = {
-      source_code: Buffer.from(code).toString('base64'),
-      language_id: langConfig.id,
-      stdin: Buffer.from(String(stdin || '')).toString('base64'),
-      cpu_time_limit: 5.0,
-      wall_time_limit: 10.0,
-      memory_limit: 262144,
-      enable_network: false
-    };
-
-    const response = await fetch(`${judge0Url}/submissions?base64_encoded=true&wait=true`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
+    // 4. Execute purely in Judge0 sandbox (Ephemeral - NO DB records, NO queue, NO AI, NO leaderboard)
+    const sandboxRunner = new SandboxRunnerService();
+    const result = await sandboxRunner.executeEphemeral({
+      language: language as SupportedLanguage,
+      code,
+      stdin: stdin || ''
     });
 
-    if (!response.ok) {
-      throw new Error(`Judge0 responded with HTTP ${response.status}`);
-    }
-
-    const data: any = await response.json();
-    const stdout = data.stdout ? Buffer.from(data.stdout, 'base64').toString('utf8') : '';
-    const stderr = data.stderr ? Buffer.from(data.stderr, 'base64').toString('utf8') : '';
-    const compileOutput = data.compile_output ? Buffer.from(data.compile_output, 'base64').toString('utf8') : '';
-    const execTimeMs = data.time ? Math.round(parseFloat(String(data.time)) * 1000) : 0;
-    const memKb = data.memory || 0;
-
     res.status(200).json(
-      createSuccessResponse(
-        {
-          stdout,
-          stderr,
-          compileOutput,
-          executionTimeMs: execTimeMs,
-          memoryUsedKb: memKb,
-          statusId: data.status_id,
-          statusDescription: data.status?.description || 'Executed'
-        },
-        'Custom code executed successfully'
-      )
+      createSuccessResponse(result, 'Custom code executed successfully in isolated sandbox')
     );
   } catch (err: any) {
     console.error('[SubmissionController] runCustomCode error:', err.message);

@@ -173,12 +173,6 @@ export function startSubmissionWorker(): Worker {
           memoryLimitKb: problem.memoryLimitKb
         });
 
-        // Update Leaderboard immediately if Accepted (deterministic gate)
-        if (outcome.verdict === 'ACCEPTED' && !isTestRun) {
-          const zsetKey = `leaderboard:problem:${problemId}`;
-          await redisPublisher.zadd(zsetKey, initialScoring.compositeScore, submissionId);
-        }
-
         const initialAiStatus: AIAnalysisStatus =
           outcome.verdict === 'COMPILATION_ERROR' ? 'SKIPPED' : 'PENDING';
         const initialAiSummary =
@@ -186,7 +180,7 @@ export function startSubmissionWorker(): Worker {
             ? 'Compilation failed. AI analysis bypassed.'
             : 'Deterministic evaluation complete. AI analysis pending.';
 
-        // Persist Initial Evaluation Report Document in MongoDB
+        // 1. Persist Initial Evaluation Report Document in MongoDB FIRST
         const reportInsert = await reportsCol.insertOne({
           submissionId,
           userId,
@@ -223,8 +217,8 @@ export function startSubmissionWorker(): Worker {
 
         const reportId = reportInsert.insertedId.toString();
 
-        // PERSIST DETERMINISTIC VERDICT TO SUBMISSION DOCUMENT IMMEDIATELY
-        // Invariant: verdict is now locked and can NEVER be overwritten by AI errors
+        // 2. PERSIST DETERMINISTIC VERDICT TO SUBMISSION DOCUMENT IMMEDIATELY (BEFORE ANY REDIS/AI OPERATIONS)
+        // Invariant: verdict is now permanently locked in MongoDB and can NEVER be overwritten by Redis or AI failures
         await submissionsCol.updateOne(
           { _id: new mongoose.Types.ObjectId(submissionId) },
           {
@@ -241,6 +235,7 @@ export function startSubmissionWorker(): Worker {
               testResults: outcome.testResults,
               evaluationReportId: reportId,
               aiStatus: initialAiStatus,
+              leaderboardSyncPending: false,
               updatedAt: new Date()
             }
           }
@@ -249,6 +244,23 @@ export function startSubmissionWorker(): Worker {
         console.log(
           `[SubmissionWorker] Deterministic verdict locked for ${submissionId}: ${outcome.verdict} (Passed: ${outcome.passedCount}/${outcome.totalCount})`
         );
+
+        // 3. Update Leaderboard in Redis (Fault-tolerant; executed strictly AFTER MongoDB persistence)
+        if (outcome.verdict === 'ACCEPTED' && !isTestRun) {
+          try {
+            const zsetKey = `leaderboard:problem:${problemId}`;
+            await redisPublisher.zadd(zsetKey, initialScoring.compositeScore, submissionId);
+          } catch (redisErr: any) {
+            console.warn(`[SubmissionWorker] Leaderboard Redis update failed for submission ${submissionId}:`, redisErr.message);
+            // Leaderboard Redis failure must NEVER fail the submission evaluation or alter verdict!
+            try {
+              await submissionsCol.updateOne(
+                { _id: new mongoose.Types.ObjectId(submissionId) },
+                { $set: { leaderboardSyncPending: true } }
+              );
+            } catch {}
+          }
+        }
 
         // STAGE 2: Decoupled & Isolated AI Analysis Execution
         if (outcome.verdict === 'COMPILATION_ERROR') {
@@ -297,6 +309,7 @@ export function startSubmissionWorker(): Worker {
           } else {
             try {
               await aiAnalysisQueue.add('analyze-submission-ai', aiContext, {
+                jobId: `ai-analysis-${submissionId}`,
                 attempts: 3,
                 backoff: { type: 'exponential', delay: 2000 },
                 removeOnComplete: 100,

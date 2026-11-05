@@ -9,13 +9,17 @@ import {
   XCircle,
   Clock,
   Terminal,
-  Cpu
+  Cpu,
+  AlertTriangle,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import {
   Problem,
   SupportedLanguage,
   LANGUAGE_CONFIGS,
-  SubmissionStatusStreamEvent
+  SubmissionStatusStreamEvent,
+  CustomRunResult
 } from '@aica/shared';
 import { api } from '../services/api';
 import { useSubmissionSSE } from '../hooks/useSSE';
@@ -32,7 +36,9 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
   const [code, setCode] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'tests' | 'custom' | 'console'>('tests');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRunningCustom, setIsRunningCustom] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string | null>(null);
+  const [customRunResult, setCustomRunResult] = useState<CustomRunResult | null>(null);
   const [activeTestIndex, setActiveTestIndex] = useState(0);
   const [customStdin, setCustomStdin] = useState<string>('');
 
@@ -77,14 +83,15 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
 
   // Ephemeral Custom Run (Fast isolated sandbox without polluting DB history)
   const handleRunCustom = async () => {
-    setIsSubmitting(true);
-    setConsoleOutput('Executing in isolated Judge0 sandbox...');
+    setIsRunningCustom(true);
+    setConsoleOutput(null);
+    setCustomRunResult(null);
     setActiveTab('console');
 
     const stdinToUse =
       activeTab === 'custom'
         ? customStdin
-        : (publicTestCases[activeTestIndex]?.input || customStdin);
+        : (customStdin || publicTestCases[activeTestIndex]?.input || '');
 
     try {
       const res = await api.post('/submissions/run-custom', {
@@ -93,24 +100,20 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
         stdin: stdinToUse
       });
 
-      const data = res.data.data;
-      if (data.compileOutput) {
-        setConsoleOutput(`[COMPILATION ERROR]\n${data.compileOutput}`);
-      } else if (data.stderr) {
-        setConsoleOutput(`[RUNTIME ERROR]\n${data.stderr}\n\n[STANDARD OUTPUT]\n${data.stdout || '(no output)'}\n\nExecution Time: ${data.executionTimeMs}ms | Peak Memory: ${Math.round(data.memoryUsedKb / 1024)}MB`);
-      } else {
-        setConsoleOutput(`[STANDARD OUTPUT]\n${data.stdout || '(no output)'}\n\nStatus: ${data.statusDescription}\nLatency: ${data.executionTimeMs}ms | Peak Memory: ${Math.round(data.memoryUsedKb / 1024)}MB`);
-      }
+      const data: CustomRunResult = res.data.data;
+      setCustomRunResult(data);
     } catch (err: any) {
+      setCustomRunResult(null);
       setConsoleOutput(`Execution failed: ${err.response?.data?.error?.message || err.message}`);
     } finally {
-      setIsSubmitting(false);
+      setIsRunningCustom(false);
     }
   };
 
   // Full Official Submission Evaluation
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setCustomRunResult(null);
     setConsoleOutput('Queueing official solution for batch sandbox verification...');
     setActiveTab('console');
 
@@ -161,16 +164,20 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         if (e.shiftKey) {
           e.preventDefault();
-          handleSubmit();
+          if (!isSubmitting && !isRunningCustom && !isStreaming) {
+            handleSubmit();
+          }
         } else {
           e.preventDefault();
-          handleRunCustom();
+          if (!isSubmitting && !isRunningCustom && !isStreaming) {
+            handleRunCustom();
+          }
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [code, language, customStdin, activeTestIndex, activeTab]);
+  }, [code, language, customStdin, activeTestIndex, activeTab, isSubmitting, isRunningCustom, isStreaming]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl transition-colors duration-200">
@@ -201,21 +208,29 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
         <div className="flex items-center gap-2">
           <button
             onClick={handleRunCustom}
-            disabled={isSubmitting || isStreaming}
+            disabled={isSubmitting || isRunningCustom || isStreaming}
             className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold disabled:opacity-50 transition cursor-pointer"
             title="Run against custom or public input (Ctrl+Enter)"
           >
-            <Play className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
-            Run Code
+            {isRunningCustom ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <Play className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
+            )}
+            {isRunningCustom ? 'Running...' : 'Run Code'}
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || isStreaming}
+            disabled={isSubmitting || isRunningCustom || isStreaming}
             className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 disabled:opacity-50 transition cursor-pointer"
             title="Submit for full verification & ranking (Ctrl+Shift+Enter)"
           >
-            <Send className="w-3.5 h-3.5" />
-            Submit Solution
+            {isSubmitting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Send className="w-3.5 h-3.5" />
+            )}
+            {isSubmitting ? 'Evaluating...' : 'Submit Solution'}
           </button>
         </div>
       </div>
@@ -242,7 +257,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
       )}
 
       {/* Monaco Code Editor Canvas */}
-      <div className="flex-1 min-h-[350px]">
+      <div className="flex-1 min-h-[320px]">
         <Editor
           height="100%"
           language={LANGUAGE_CONFIGS[language].monacoLanguage}
@@ -261,7 +276,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
       </div>
 
       {/* Bottom Test Case & Console Panel */}
-      <div className="h-48 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
+      <div className="h-60 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
         <div className="flex items-center gap-4 px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-xs font-medium">
           <button
             onClick={() => setActiveTab('tests')}
@@ -306,7 +321,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
                   <button
                     key={tc.id || idx}
                     onClick={() => setActiveTestIndex(idx)}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-xs font-semibold cursor-pointer transition ${
                       activeTestIndex === idx
                         ? 'bg-slate-200 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-300 dark:border-slate-700'
                         : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-transparent'
@@ -332,24 +347,133 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
             </div>
           ) : activeTab === 'custom' ? (
             <div className="space-y-2 h-full flex flex-col">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 font-sans text-xs font-medium">
-                <span>Enter custom input stream (stdin):</span>
-                <span className="text-[11px] text-slate-400 font-normal">Press Ctrl+Enter to execute in sandbox</span>
+              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 font-sans text-xs pb-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Custom Input (stdin):</span>
+                  <span className="text-[11px] text-slate-400">
+                    {new TextEncoder().encode(customStdin).length} / 65536 bytes
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {publicTestCases.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] text-slate-400">Load test case:</span>
+                      {publicTestCases.map((tc, idx) => (
+                        <button
+                          key={tc.id || idx}
+                          type="button"
+                          onClick={() => setCustomStdin(tc.input)}
+                          className="px-2 py-0.5 text-[11px] font-mono rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                          title={`Load Case ${idx + 1} input`}
+                        >
+                          Case {idx + 1}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {customStdin && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomStdin('')}
+                      className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                      title="Clear custom input"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <textarea
                 value={customStdin}
                 onChange={(e) => setCustomStdin(e.target.value)}
                 placeholder="Paste or write custom stdin lines here..."
-                rows={3}
-                className="flex-1 w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="flex-1 w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"
               />
             </div>
           ) : (
             <div>
-              {consoleOutput ? (
+              {isRunningCustom ? (
+                <div className="flex items-center justify-center gap-3 py-10 text-slate-500 dark:text-slate-400">
+                  <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
+                  <span className="font-sans text-xs">Executing code in isolated Judge0 sandbox...</span>
+                </div>
+              ) : customRunResult ? (
+                <div className="space-y-3">
+                  {/* Result Header Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      {customRunResult.verdict === 'ACCEPTED' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> ACCEPTED
+                        </span>
+                      ) : customRunResult.verdict === 'TIME_LIMIT_EXCEEDED' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                          <Clock className="w-3.5 h-3.5" /> TIME LIMIT EXCEEDED
+                        </span>
+                      ) : customRunResult.verdict === 'MEMORY_LIMIT_EXCEEDED' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                          <Cpu className="w-3.5 h-3.5" /> MEMORY LIMIT EXCEEDED
+                        </span>
+                      ) : customRunResult.verdict === 'COMPILATION_ERROR' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                          <XCircle className="w-3.5 h-3.5" /> COMPILATION ERROR
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                          <AlertTriangle className="w-3.5 h-3.5" /> {customRunResult.verdict}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-slate-400 font-sans">
+                        {customRunResult.statusDescription}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-sans">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        Latency: <strong className="font-mono text-slate-700 dark:text-slate-300">{customRunResult.executionTimeMs} ms</strong>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Cpu className="w-3 h-3 text-slate-400" />
+                        Memory: <strong className="font-mono text-slate-700 dark:text-slate-300">{customRunResult.memoryUsedKb > 1024 ? `${(customRunResult.memoryUsedKb / 1024).toFixed(1)} MB` : `${customRunResult.memoryUsedKb} KB`}</strong>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px]">
+                        Ephemeral Sandbox
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Compiler Output */}
+                  {customRunResult.compileOutput && (
+                    <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50">
+                      <div className="text-xs font-semibold text-rose-700 dark:text-rose-300 font-sans mb-1">Compiler Output:</div>
+                      <pre className="text-rose-600 dark:text-rose-400 whitespace-pre-wrap">{customRunResult.compileOutput}</pre>
+                    </div>
+                  )}
+
+                  {/* Standard Error */}
+                  {customRunResult.stderr && (
+                    <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50">
+                      <div className="text-xs font-semibold text-rose-700 dark:text-rose-300 font-sans mb-1">Standard Error (stderr):</div>
+                      <pre className="text-rose-600 dark:text-rose-400 whitespace-pre-wrap">{customRunResult.stderr}</pre>
+                    </div>
+                  )}
+
+                  {/* Standard Output */}
+                  <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-sans mb-1">Standard Output (stdout):</div>
+                    {customRunResult.stdout ? (
+                      <pre className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{customRunResult.stdout}</pre>
+                    ) : (
+                      <div className="text-slate-400 italic font-sans">(Empty standard output)</div>
+                    )}
+                  </div>
+                </div>
+              ) : consoleOutput ? (
                 <pre className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">{consoleOutput}</pre>
               ) : (
-                <div className="text-slate-400 dark:text-slate-500 italic py-4 text-center font-sans">
+                <div className="text-slate-400 dark:text-slate-500 italic py-6 text-center font-sans">
                   Click &quot;Run Code&quot; (Ctrl+Enter) or &quot;Submit Solution&quot; (Ctrl+Shift+Enter) to inspect isolated Judge0 stdout, stderr, and execution telemetry.
                 </div>
               )}

@@ -54,6 +54,7 @@ export interface Submission {
   evaluationReportId?: string;
   aiStatus?: AIAnalysisStatus;
   aiError?: string;
+  leaderboardSyncPending?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,4 +76,16 @@ export interface SubmissionStatusStreamEvent {
   reportId?: string;
   aiStatus?: AIAnalysisStatus;
   compositeScore?: number;
+}
+
+export interface CustomRunResult {
+  stdout: string;
+  stderr: string;
+  compileOutput: string;
+  executionTimeMs: number;
+  memoryUsedKb: number;
+  statusId: number;
+  statusDescription: string;
+  isError: boolean;
+  verdict: Verdict;
 }
