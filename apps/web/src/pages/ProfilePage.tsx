@@ -223,12 +223,65 @@ export function ProfilePage() {
     }
   };
 
-  // Generate 52 weeks of mock heatmap activity data
+  const [heatmapData, setHeatmapData] = useState<{
+    activityByDate: Record<string, number>;
+    totalSubmissions: number;
+    problemsSolved: number;
+    currentStreak: number;
+    longestStreak: number;
+  }>({
+    activityByDate: {},
+    totalSubmissions: profile?.totalSubmissions || 0,
+    problemsSolved: profile?.problemsSolved || 0,
+    currentStreak: profile?.currentStreak || 0,
+    longestStreak: 0
+  });
+
+  const [realSubmissions, setRealSubmissions] = useState<any[]>([]);
+  const [loadingRealData, setLoadingRealData] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfileMetrics = async () => {
+      try {
+        const [heatRes, subRes] = await Promise.allSettled([
+          api.get('/submissions/activity-heatmap'),
+          api.get('/submissions/my?limit=20')
+        ]);
+
+        if (isMounted) {
+          if (heatRes.status === 'fulfilled' && heatRes.value.data?.data) {
+            setHeatmapData(heatRes.value.data.data);
+          }
+          if (subRes.status === 'fulfilled' && subRes.value.data?.data?.submissions) {
+            setRealSubmissions(subRes.value.data.data.submissions);
+          }
+        }
+      } catch (err) {
+        console.warn('[Profile] Failed to fetch metrics:', err);
+      } finally {
+        if (isMounted) setLoadingRealData(false);
+      }
+    };
+
+    fetchProfileMetrics();
+    return () => {
+      isMounted = false;
+    };
+  }, [profile]);
+
+  // Generate 24 weeks of real date-mapped heatmap activity data
+  const today = new Date();
   const heatmapWeeks = Array.from({ length: 24 }).map((_, wIdx) =>
     Array.from({ length: 7 }).map((_, dIdx) => {
-      // Deterministic pseudo-random pattern for realistic activity
-      const val = (wIdx * 7 + dIdx * 3) % 11;
-      return val > 6 ? (val % 4) + 1 : 0;
+      // Days offset from today
+      const daysAgo = (23 - wIdx) * 7 + (6 - dIdx);
+      const targetDate = new Date(today);
+      targetDate.setDate(targetDate.getDate() - daysAgo);
+      const dateKey = targetDate.toISOString().split('T')[0];
+      const count = heatmapData.activityByDate[dateKey] || 0;
+      const level = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3;
+      return { level, count, dateKey };
     })
   );
 
@@ -352,31 +405,31 @@ export function ProfilePage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">
-                {profile?.problemsSolved || 14}
+                {heatmapData.problemsSolved}
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/ 50 Catalog</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Solved</span>
             </div>
             <div className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-md w-fit">
-              <span>8 Easy</span> • <span>5 Medium</span> • <span>1 Hard</span>
+              <span>Verified in Judge0 Sandboxes</span>
             </div>
           </div>
 
-          {/* Card 2: Algorithmic Speedup Delta */}
+          {/* Card 2: Longest Streak */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Evolution Delta</span>
+              <span className="text-xs font-bold uppercase tracking-wider">Longest Streak</span>
               <Zap className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">
-                98.4%
+                {heatmapData.longestStreak}
               </span>
               <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-1.5 py-0.5 rounded">
-                Avg Drop
+                Days
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
-              Average latency reduction across iterations
+              Maximum consecutive daily streak
             </p>
           </div>
 
@@ -388,9 +441,9 @@ export function ProfilePage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">
-                {profile?.totalSubmissions || 42}
+                {heatmapData.totalSubmissions}
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Isolated passes</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Executions</span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
               cgroup kernel evaluations performed
@@ -405,7 +458,7 @@ export function ProfilePage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900 dark:text-white font-mono flex items-center gap-1">
-                {profile?.currentStreak || 5} <span className="text-xl">Days</span>
+                {heatmapData.currentStreak} <span className="text-xl">Days</span>
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
@@ -424,7 +477,7 @@ export function ProfilePage() {
                 Annual Evaluation Activity
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                42 kernel evaluations and submissions across past months
+                {heatmapData.totalSubmissions} kernel evaluations and submissions across past months
               </p>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -442,13 +495,13 @@ export function ProfilePage() {
             <div className="flex gap-1 min-w-[640px]">
               {heatmapWeeks.map((week, wIdx) => (
                 <div key={wIdx} className="flex flex-col gap-1">
-                  {week.map((level, dIdx) => {
+                  {week.map((item, dIdx) => {
                     const bgClass =
-                      level === 0
+                      item.level === 0
                         ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'
-                        : level === 1
+                        : item.level === 1
                         ? 'bg-emerald-200 dark:bg-emerald-800 hover:bg-emerald-300 dark:hover:bg-emerald-700'
-                        : level === 2
+                        : item.level === 2
                         ? 'bg-emerald-400 dark:bg-emerald-600 hover:bg-emerald-500 dark:hover:bg-emerald-500'
                         : 'bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-400';
 
@@ -456,7 +509,7 @@ export function ProfilePage() {
                       <div
                         key={dIdx}
                         className={`w-3.5 h-3.5 rounded-xs ${bgClass} transition-colors cursor-pointer`}
-                        title={`Week ${wIdx + 1}: ${level > 0 ? level * 2 : 0} runs`}
+                        title={`${item.dateKey}: ${item.count} submission${item.count === 1 ? '' : 's'}`}
                       />
                     );
                   })}
@@ -480,7 +533,7 @@ export function ProfilePage() {
               }`}
             >
               <Zap className="w-4 h-4" />
-              Evolution History ({SAMPLE_EVOLUTIONS.length})
+              Evolution History ({realSubmissions.length})
             </button>
             <button
               onClick={() => setActiveTab('skills')}
@@ -509,92 +562,107 @@ export function ProfilePage() {
           {/* TAB 1: EVOLUTION HISTORY FEED */}
           {activeTab === 'evolution' && (
             <div className="space-y-4">
-              {SAMPLE_EVOLUTIONS.map((evo) => (
-                <div
-                  key={evo.id}
-                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition space-y-4"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-base text-slate-900 dark:text-slate-100">
-                        {evo.problemTitle}
-                      </span>
-                      <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
-                          evo.difficulty === 'Easy'
-                            ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60'
-                            : evo.difficulty === 'Medium'
-                            ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60'
-                            : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60'
-                        }`}
-                      >
-                        {evo.difficulty}
-                      </span>
-                      <span className="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                        {evo.language}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                      <span>{evo.date}</span>
-                      <Link
-                        to={`/workspace/${evo.problemId}`}
-                        className="font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-1"
-                      >
-                        Open Workspace
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Latency & Memory Transition Ribbon */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-xs">
-                    {/* Runtime Delta */}
-                    <div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
-                        Execution Latency Transition
-                      </span>
-                      <div className="flex items-baseline gap-2 font-mono">
-                        <span className="text-slate-400 dark:text-slate-500 line-through">
-                          {evo.initialRuntimeMs}ms
-                        </span>
-                        <span className="text-slate-400 dark:text-slate-500">&rarr;</span>
-                        <span className="font-extrabold text-slate-900 dark:text-slate-100">
-                          {evo.optimalRuntimeMs}ms
-                        </span>
-                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded">
-                          -{evo.speedupPercent}%
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Memory Footprint */}
-                    <div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
-                        Peak Memory Footprint
-                      </span>
-                      <div className="flex items-baseline gap-2 font-mono text-slate-700 dark:text-slate-300">
-                        <span>{evo.initialMemoryMb} MB</span>
-                        <span className="text-slate-400 dark:text-slate-500">&rarr;</span>
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
-                          {evo.optimalMemoryMb} MB
-                        </span>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">(Heap)</span>
-                      </div>
-                    </div>
-
-                    {/* Pedagogical Verdict */}
-                    <div className="sm:col-span-2 lg:col-span-1">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
-                        Gemini AST Verdict
-                      </span>
-                      <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed truncate">
-                        {evo.pedagogicalVerdict}
-                      </p>
-                    </div>
+              {loadingRealData ? (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+                  <RefreshCw className="w-6 h-6 animate-spin mb-2" />
+                  <p className="text-xs">Loading submission history...</p>
+                </div>
+              ) : realSubmissions.length === 0 ? (
+                <div className="py-12 px-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-3 bg-white dark:bg-slate-900">
+                  <Code2 className="w-8 h-8 text-slate-400 mx-auto" />
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">No Submissions Recorded Yet</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    You haven't run any code submissions yet. Choose a problem from the catalog or formulate one with AI to start building your record.
+                  </p>
+                  <div className="pt-2">
+                    <Link
+                      to="/problems"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition"
+                    >
+                      Solve Your First Challenge
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
-              ))}
+              ) : (
+                realSubmissions.map((sub: any) => {
+                  const isAccepted = sub.verdict === 'ACCEPTED';
+                  const dateStr = new Date(sub.createdAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+
+                  return (
+                    <div
+                      key={sub.id}
+                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-base text-slate-900 dark:text-slate-100">
+                            {sub.problemTitle || 'Challenge Solution'}
+                          </span>
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                              isAccepted
+                                ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60'
+                                : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60'
+                            }`}
+                          >
+                            {sub.verdict}
+                          </span>
+                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">
+                            {sub.language}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                          <span>{dateStr}</span>
+                          <Link
+                            to={`/workspace/${sub.problemId}`}
+                            className="font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-1"
+                          >
+                            Open Workspace
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Execution Metrics Ribbon */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-xs">
+                        <div>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                            Execution Latency
+                          </span>
+                          <span className="font-mono font-extrabold text-slate-900 dark:text-slate-100">
+                            {sub.executionTimeMs != null ? `${sub.executionTimeMs}ms` : '--'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                            Peak Memory Footprint
+                          </span>
+                          <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                            {sub.memoryUsedKb != null ? `${Math.round(sub.memoryUsedKb / 1024)} MB` : '--'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
+                            Composite Quality Score
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            {sub.compositeScore != null ? `${sub.compositeScore} / 100` : 'Evaluated'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
 

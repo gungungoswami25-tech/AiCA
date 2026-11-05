@@ -82,7 +82,7 @@ export function GoogleSignInButton({ onError, text = 'signin_with', label }: Goo
             text={text}
           />
         </div>
-      ) : (
+      ) : import.meta.env.DEV ? (
         <button
           type="button"
           onClick={handleDevMockLogin}
@@ -108,8 +108,14 @@ export function GoogleSignInButton({ onError, text = 'signin_with', label }: Goo
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span className="text-slate-700 font-semibold">{loading ? 'Connecting...' : buttonLabel}</span>
+          <span className="text-slate-700 font-semibold">
+            {loading ? 'Connecting...' : `${buttonLabel} (Dev Mode)`}
+          </span>
         </button>
+      ) : (
+        <div className="w-full py-2 px-3 rounded-md bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-center text-xs text-slate-500">
+          Google OAuth is not configured in this environment. Please sign in with email.
+        </div>
       )}
     </div>
   );
