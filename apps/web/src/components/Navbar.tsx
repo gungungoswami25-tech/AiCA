@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Code2, Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow } from 'lucide-react';
+import { Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 export function Navbar() {
@@ -12,73 +12,86 @@ export function Navbar() {
   };
 
   return (
-    <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <header className="border-b border-slate-200/90 bg-white/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-center p-1 shadow-lg shadow-emerald-500/10 group-hover:border-emerald-500/40 transition">
+          <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-1 shadow-sm group-hover:border-slate-700 transition">
             <img src="/logo.png" alt="GV2 Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-emerald-400 via-amber-300 to-rose-400 bg-clip-text text-transparent">
-              AI Code Evolution Lab
-            </span>
-            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-              GV2
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-base tracking-tight text-slate-900 group-hover:text-emerald-700 transition">
+                AI Code Evolution Lab
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
+                GV2
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 hidden sm:block">
+              Pedagogical Code Evaluation Platform
+            </p>
           </div>
         </Link>
 
-        <nav className="flex items-center gap-1 sm:gap-4 text-sm font-medium">
+        <nav className="flex items-center gap-1 sm:gap-3 text-sm font-medium">
           <Link
             to="/problems"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
           >
-            <BookOpen className="w-4 h-4 text-indigo-400" />
+            <BookOpen className="w-4 h-4 text-emerald-600" />
             Problems
           </Link>
           <Link
             to="/algorithms"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
           >
-            <Workflow className="w-4 h-4 text-purple-400" />
+            <Workflow className="w-4 h-4 text-indigo-600" />
             Algorithms
           </Link>
           <Link
             to="/leaderboard"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
           >
-            <Trophy className="w-4 h-4 text-amber-400" />
+            <Trophy className="w-4 h-4 text-amber-600" />
             Leaderboards
-          </Link>
-          <Link
-            to="/dashboard"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition"
-          >
-            <BarChart2 className="w-4 h-4 text-emerald-400" />
-            Dashboard
           </Link>
 
           {isAuthenticated ? (
-            <div className="flex items-center gap-3 ml-3 pl-3 border-l border-slate-800">
-              <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                <UserIcon className="w-3.5 h-3.5 text-indigo-400" />
-                {user?.username}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
-                title="Sign Out"
+            <>
+              <Link
+                to="/dashboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
               >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+                <BarChart2 className="w-4 h-4 text-teal-600" />
+                Dashboard
+              </Link>
+              <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
+                <span className="text-xs text-slate-700 font-medium flex items-center gap-1 font-mono bg-slate-100 px-2.5 py-1 rounded-lg">
+                  <UserIcon className="w-3.5 h-3.5 text-indigo-600" />
+                  {user?.username}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </>
           ) : (
-            <div className="flex items-center gap-2 ml-3">
+            <div className="flex items-center gap-2 ml-2">
               <Link
                 to="/login"
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-md shadow-indigo-600/30 transition"
+                className="px-3.5 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50 font-medium text-xs transition"
               >
                 Sign In
+              </Link>
+              <Link
+                to="/register"
+                className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-xs transition"
+              >
+                Get Started
               </Link>
             </div>
           )}
