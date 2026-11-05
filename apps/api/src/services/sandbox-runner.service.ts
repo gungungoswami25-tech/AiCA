@@ -2,7 +2,7 @@ import {
   LANGUAGE_CONFIGS,
   SupportedLanguage,
   CustomRunResult,
-  Verdict
+  CustomRunVerdict
 } from '@aica/shared';
 
 export interface SandboxExecutionOptions {
@@ -32,7 +32,7 @@ export class SandboxRunnerService {
     return headers;
   }
 
-  public mapStatusToVerdict(statusId: number, statusDesc = ''): { verdict: Verdict; isError: boolean } {
+  public mapStatusToVerdict(statusId: number, statusDesc = ''): { verdict: CustomRunVerdict; isError: boolean } {
     const descLower = (statusDesc || '').toLowerCase();
 
     if (statusId === 6) {
@@ -48,7 +48,7 @@ export class SandboxRunnerService {
       return { verdict: 'RUNTIME_ERROR', isError: true };
     }
     if (statusId === 3 || statusId === 4) {
-      return { verdict: 'ACCEPTED', isError: false };
+      return { verdict: 'EXECUTED', isError: false };
     }
     if (statusId === 13) {
       return { verdict: 'INTERNAL_ERROR', isError: true };
@@ -78,11 +78,27 @@ export class SandboxRunnerService {
       enable_network: false
     };
 
-    const response = await fetch(`${this.judge0Url}/submissions?base64_encoded=true&wait=true`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(payload)
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.judge0Url}/submissions?base64_encoded=true&wait=true`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000)
+      });
+    } catch (fetchErr: any) {
+      if (
+        fetchErr.name === 'TimeoutError' ||
+        fetchErr.name === 'AbortError' ||
+        fetchErr.message?.toLowerCase().includes('timeout') ||
+        fetchErr.message?.toLowerCase().includes('aborted')
+      ) {
+        const timeoutErr = new Error('Judge0 sandbox execution timed out after 15000ms');
+        timeoutErr.name = 'TimeoutError';
+        throw timeoutErr;
+      }
+      throw fetchErr;
+    }
 
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
@@ -96,7 +112,9 @@ export class SandboxRunnerService {
     const execTimeMs = data.time ? Math.round(parseFloat(String(data.time)) * 1000) : 0;
     const memKb = data.memory || 0;
     const statusId = data.status_id || (data.status?.id ?? 3);
-    const statusDescription = data.status?.description || (statusId === 3 ? 'Accepted' : 'Executed');
+    const statusDescription = (data.status?.description === 'Accepted' || statusId === 3)
+      ? 'Executed'
+      : (data.status?.description || 'Executed');
 
     const { verdict, isError } = this.mapStatusToVerdict(statusId, statusDescription);
 

@@ -35,6 +35,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
   const [language, setLanguage] = useState<SupportedLanguage>('python');
   const [code, setCode] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'tests' | 'custom' | 'console'>('tests');
+  const [lastInputTab, setLastInputTab] = useState<'tests' | 'custom'>('tests');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRunningCustom, setIsRunningCustom] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string | null>(null);
@@ -88,10 +89,15 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
     setCustomRunResult(null);
     setActiveTab('console');
 
+    // Strict Stdin Selection Precedence:
+    // Custom tab -> customStdin
+    // Tests tab -> selected public test case input
+    // Console tab -> whichever input tab was previously active (lastInputTab)
+    const effectiveInputTab = activeTab === 'console' ? lastInputTab : activeTab;
     const stdinToUse =
-      activeTab === 'custom'
+      effectiveInputTab === 'custom'
         ? customStdin
-        : (customStdin || publicTestCases[activeTestIndex]?.input || '');
+        : (publicTestCases[activeTestIndex]?.input ?? '');
 
     try {
       const res = await api.post('/submissions/run-custom', {
@@ -279,7 +285,10 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
       <div className="h-60 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
         <div className="flex items-center gap-4 px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-xs font-medium">
           <button
-            onClick={() => setActiveTab('tests')}
+            onClick={() => {
+              setActiveTab('tests');
+              setLastInputTab('tests');
+            }}
             className={`flex items-center gap-1.5 pb-1 cursor-pointer transition ${
               activeTab === 'tests'
                 ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 font-semibold'
@@ -290,7 +299,10 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
             Test Cases ({publicTestCases.length})
           </button>
           <button
-            onClick={() => setActiveTab('custom')}
+            onClick={() => {
+              setActiveTab('custom');
+              setLastInputTab('custom');
+            }}
             className={`flex items-center gap-1.5 pb-1 cursor-pointer transition ${
               activeTab === 'custom'
                 ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 font-semibold'
@@ -403,9 +415,9 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
                   {/* Result Header Bar */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                     <div className="flex items-center gap-2">
-                      {customRunResult.verdict === 'ACCEPTED' ? (
+                      {customRunResult.verdict === 'EXECUTED' ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> ACCEPTED
+                          <CheckCircle2 className="w-3.5 h-3.5" /> EXECUTED
                         </span>
                       ) : customRunResult.verdict === 'TIME_LIMIT_EXCEEDED' ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">

@@ -493,6 +493,16 @@ export async function runCustomCode(req: Request, res: Response): Promise<void> 
     );
   } catch (err: any) {
     console.error('[SubmissionController] runCustomCode error:', err.message);
+    if (
+      err.name === 'TimeoutError' ||
+      err.message?.toLowerCase().includes('timed out') ||
+      err.message?.toLowerCase().includes('timeout')
+    ) {
+      res.status(504).json(
+        createErrorResponse('SANDBOX_TIMEOUT', 'Code execution sandbox timed out after 15000ms')
+      );
+      return;
+    }
     res.status(503).json(
       createErrorResponse('SANDBOX_UNAVAILABLE', `Code execution sandbox is unavailable: ${err.message}`)
     );
