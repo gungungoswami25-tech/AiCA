@@ -57,6 +57,7 @@ const EvaluationReportSchema = new Schema<EvaluationReportDocument>({
     percentileMemory: { type: Number, default: 0 }
   }
 }, {
+  collection: 'evaluation_reports',
   timestamps: true,
   toJSON: {
     virtuals: true,
