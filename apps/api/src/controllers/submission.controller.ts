@@ -188,7 +188,10 @@ export async function getMySubmissions(req: Request, res: Response): Promise<voi
   const skip = (page - 1) * limit;
 
   try {
-    const query = { userId, isTestRun: false };
+    const query: Record<string, any> = { userId, isTestRun: false };
+    if (req.query.problemId) {
+      query.problemId = req.query.problemId;
+    }
     const [submissions, total] = await Promise.all([
       SubmissionModel.find(query)
         .sort({ createdAt: -1 })
@@ -297,5 +300,78 @@ export async function getActivityHeatmap(req: Request, res: Response): Promise<v
     );
   } catch (err: any) {
     res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve activity heatmap'));
+  }
+}
+
+export async function runCustomCode(req: Request, res: Response): Promise<void> {
+  const { language, code, stdin = '' } = req.body;
+  if (!code || !language) {
+    res.status(400).json(createErrorResponse('VALIDATION_ERROR', 'Language and code are required'));
+    return;
+  }
+
+  const langConfig = LANGUAGE_CONFIGS[language as SupportedLanguage];
+  if (!langConfig) {
+    res.status(400).json(createErrorResponse('UNSUPPORTED_LANGUAGE', 'Selected language is not supported'));
+    return;
+  }
+
+  const judge0Url = (process.env.JUDGE0_API_URL || 'http://localhost:2358').replace(/\/+$/, '');
+  const apiKey = process.env.JUDGE0_API_KEY;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  if (apiKey) {
+    headers['X-RapidAPI-Key'] = apiKey;
+  }
+
+  try {
+    const payload = {
+      source_code: Buffer.from(code).toString('base64'),
+      language_id: langConfig.id,
+      stdin: Buffer.from(String(stdin || '')).toString('base64'),
+      cpu_time_limit: 5.0,
+      wall_time_limit: 10.0,
+      memory_limit: 262144,
+      enable_network: false
+    };
+
+    const response = await fetch(`${judge0Url}/submissions?base64_encoded=true&wait=true`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Judge0 responded with HTTP ${response.status}`);
+    }
+
+    const data: any = await response.json();
+    const stdout = data.stdout ? Buffer.from(data.stdout, 'base64').toString('utf8') : '';
+    const stderr = data.stderr ? Buffer.from(data.stderr, 'base64').toString('utf8') : '';
+    const compileOutput = data.compile_output ? Buffer.from(data.compile_output, 'base64').toString('utf8') : '';
+    const execTimeMs = data.time ? Math.round(parseFloat(String(data.time)) * 1000) : 0;
+    const memKb = data.memory || 0;
+
+    res.status(200).json(
+      createSuccessResponse(
+        {
+          stdout,
+          stderr,
+          compileOutput,
+          executionTimeMs: execTimeMs,
+          memoryUsedKb: memKb,
+          statusId: data.status_id,
+          statusDescription: data.status?.description || 'Executed'
+        },
+        'Custom code executed successfully'
+      )
+    );
+  } catch (err: any) {
+    console.error('[SubmissionController] runCustomCode error:', err.message);
+    res.status(503).json(
+      createErrorResponse('SANDBOX_UNAVAILABLE', `Code execution sandbox is unavailable: ${err.message}`)
+    );
   }
 }

@@ -116,6 +116,18 @@ export function startSubmissionWorker(): Worker {
           { $set: { pipelineStatus: 'EXECUTING' } }
         );
 
+        // Determine language-specific time limit multiplier
+        const langMultiplier =
+          language === 'python'
+            ? (problem.benchmarks?.pythonMultiplier || 4.0)
+            : language === 'javascript'
+            ? (problem.benchmarks?.jsMultiplier || 2.5)
+            : language === 'java'
+            ? (problem.benchmarks?.javaMultiplier || 2.0)
+            : (problem.benchmarks?.cppMultiplier || 1.0);
+
+        const scaledTimeLimitMs = Math.round((problem.timeLimitMs || 2000) * langMultiplier);
+
         // Prepare batch for Judge0
         const batchInputs = testCases.map((tc: any, idx: number) => ({
           testCaseId: tc.id,
@@ -125,7 +137,7 @@ export function startSubmissionWorker(): Worker {
           languageId: languageId || 71,
           stdin: tc.input,
           expectedOutput: tc.expectedOutput,
-          cpuTimeLimit: problem.timeLimitMs,
+          cpuTimeLimit: scaledTimeLimitMs,
           memoryLimit: problem.memoryLimitKb
         }));
 
