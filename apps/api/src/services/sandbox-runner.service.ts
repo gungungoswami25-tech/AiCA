@@ -68,14 +68,21 @@ export class SandboxRunnerService {
     const scaledCpuLimit = Math.min(15.0, Math.max(1.0, baseTimeLimitSec * multiplier));
     const wallTimeLimit = scaledCpuLimit + 2.0;
 
+    let finalCode = code;
+    if (language === 'python' && /\b(list|dict|tuple|set)\[/.test(finalCode) && !finalCode.includes('__future__')) {
+      finalCode = `from __future__ import annotations\n${finalCode}`;
+    }
+
     const payload = {
-      source_code: Buffer.from(code).toString('base64'),
+      source_code: Buffer.from(finalCode).toString('base64'),
       language_id: langConfig.id,
       stdin: Buffer.from(stdin).toString('base64'),
       cpu_time_limit: scaledCpuLimit,
       wall_time_limit: wallTimeLimit,
       memory_limit: memoryLimitKb,
-      enable_network: false
+      enable_network: false,
+      enable_per_process_and_thread_time_limit: true,
+      enable_per_process_and_thread_memory_limit: true
     };
 
     let response: Response;

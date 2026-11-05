@@ -106,7 +106,7 @@ describe('E2E Engine Problem Verification & Execution Pipeline', () => {
       testCases: [
         { id: 'tc-subsum-1', input: '3 2\n1 1 1', expectedOutput: '2', isPublic: true },
         { id: 'tc-subsum-2', input: '3 3\n1 2 3', expectedOutput: '2', isPublic: true },
-        { id: 'tc-subsum-3', input: '5 0\n1 -1 1 -1 1', expectedOutput: '4', isPublic: false, isEdgeCase: true },
+        { id: 'tc-subsum-3', input: '5 0\n1 -1 1 -1 1', expectedOutput: '6', isPublic: false, isEdgeCase: true },
         { id: 'tc-subsum-4', input: '1 0\n0', expectedOutput: '1', isPublic: false, isEdgeCase: true }
       ]
     }
