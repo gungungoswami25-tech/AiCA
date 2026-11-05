@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -8,19 +9,70 @@ import {
   HelpCircle,
   Code,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { EvaluationReport, Submission } from '@aica/shared';
+import { api } from '../services/api';
 
 interface EvaluationReportViewProps {
   report: EvaluationReport;
   submission?: Submission;
   onCompareRequest?: () => void;
+  onReportUpdate?: (updatedReport: EvaluationReport) => void;
 }
 
-export function EvaluationReportView({ report, submission, onCompareRequest }: EvaluationReportViewProps) {
+export function EvaluationReportView({
+  report: initialReport,
+  submission,
+  onCompareRequest,
+  onReportUpdate
+}: EvaluationReportViewProps) {
+  const [report, setReport] = useState<EvaluationReport>(initialReport);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryMessage, setRetryMessage] = useState<string | null>(null);
+
   const isAccepted = report.verdict === 'ACCEPTED';
   const ai = report.aiAnalysis;
+  const isPending = ai?.status === 'PENDING';
+  const isFailed = ai?.status === 'FAILED';
+  const isSkipped = ai?.status === 'SKIPPED';
+
+  const handleRetryAi = async () => {
+    setIsRetrying(true);
+    setRetryMessage(null);
+    try {
+      await api.post(`/submissions/${report.submissionId}/retry-ai`);
+      setRetryMessage('AI analysis retry queued! Refreshing report...');
+      setTimeout(async () => {
+        try {
+          const res = await api.get(`/submissions/${report.submissionId}/report`);
+          setReport(res.data.data);
+          onReportUpdate?.(res.data.data);
+          setRetryMessage(null);
+        } catch {
+          // ignore deferred
+        } finally {
+          setIsRetrying(false);
+        }
+      }, 3000);
+    } catch (err: any) {
+      setRetryMessage(`Retry failed: ${err.response?.data?.error?.message || err.message}`);
+      setIsRetrying(false);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    try {
+      const res = await api.get(`/submissions/${report.submissionId}/report`);
+      setReport(res.data.data);
+      onReportUpdate?.(res.data.data);
+    } catch (err: any) {
+      console.warn('Refresh failed:', err.message);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -112,17 +164,79 @@ export function EvaluationReportView({ report, submission, onCompareRequest }: E
 
       {/* AI Pedagogical Analysis Card */}
       <div className="p-6 rounded-2xl bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
-          <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20">
-            <Sparkles className="w-5 h-5" />
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">AI Code Evolution & Complexity Insights</h3>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Evaluated via Google Gemini 1.5 &bull; {ai?.mode === 'OPTIMIZATION' ? 'Optimization Mode' : 'Diagnostic Mode'}
+              </span>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">AI Code Evolution & Complexity Insights</h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              Evaluated via Google Gemini 1.5 &bull; {ai?.mode === 'OPTIMIZATION' ? 'Optimization Mode' : 'Diagnostic Mode'}
-            </span>
-          </div>
+          {isFailed && (
+            <button
+              onClick={handleRetryAi}
+              disabled={isRetrying}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+            >
+              {isRetrying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              Retry AI Analysis
+            </button>
+          )}
+          {isPending && (
+            <button
+              onClick={handleManualRefresh}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
+          )}
         </div>
+
+        {/* Retry Message Alert */}
+        {retryMessage && (
+          <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-700 dark:text-indigo-300">
+            {retryMessage}
+          </div>
+        )}
+
+        {/* Status Callout Banners */}
+        {isPending && (
+          <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/20 flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-indigo-500 animate-spin shrink-0" />
+            <div>
+              <h4 className="text-xs font-bold text-indigo-900 dark:text-indigo-200">AI Analysis in Progress</h4>
+              <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80">
+                Deterministic tests passed! Deep asymptotic complexity and refactoring insights are being generated in the background.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isFailed && (
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/20 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+            <div>
+              <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200">AI Analysis Disruption</h4>
+              <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
+                Your deterministic verdict ({report.verdict}) is 100% verified and recorded. The AI service timed out or was rate-limited. Click "Retry AI Analysis" above to retry anytime.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isSkipped && (
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <HelpCircle className="w-5 h-5 text-slate-400 shrink-0" />
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              AI pedagogical analysis bypassed because the submission encountered a compilation error. Fix compilation issues to unlock AI insights.
+            </p>
+          </div>
+        )}
 
         {/* Complexity Explanation */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

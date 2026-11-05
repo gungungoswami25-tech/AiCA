@@ -65,6 +65,15 @@ export function Navbar() {
                 <BarChart2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 Dashboard
               </Link>
+              {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+                <Link
+                  to="/admin/problems"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs sm:text-sm font-semibold transition"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Manage Problems
+                </Link>
+              )}
 
               <ThemeToggle className="ml-1" />
 

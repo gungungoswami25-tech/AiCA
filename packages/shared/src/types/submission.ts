@@ -1,4 +1,5 @@
 import { SupportedLanguage } from '../constants/languages.js';
+import { AIAnalysisStatus } from './evaluation.js';
 
 export type PipelineStatus =
   | 'QUEUED'
@@ -51,6 +52,9 @@ export interface Submission {
   testCasesPassed: number;
   testResults: TestResultItem[];
   evaluationReportId?: string;
+  aiStatus?: AIAnalysisStatus;
+  aiError?: string;
+  leaderboardSyncPending?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,4 +74,26 @@ export interface SubmissionStatusStreamEvent {
   totalSteps: number;
   message?: string;
   reportId?: string;
+  aiStatus?: AIAnalysisStatus;
+  compositeScore?: number;
+}
+
+export type CustomRunVerdict =
+  | 'EXECUTED'
+  | 'TIME_LIMIT_EXCEEDED'
+  | 'MEMORY_LIMIT_EXCEEDED'
+  | 'COMPILATION_ERROR'
+  | 'RUNTIME_ERROR'
+  | 'INTERNAL_ERROR';
+
+export interface CustomRunResult {
+  stdout: string;
+  stderr: string;
+  compileOutput: string;
+  executionTimeMs: number;
+  memoryUsedKb: number;
+  statusId: number;
+  statusDescription: string;
+  isError: boolean;
+  verdict: CustomRunVerdict;
 }

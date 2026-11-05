@@ -4,17 +4,22 @@ import { SolutionComparisonModel } from '../models/mongodb/comparison.model.js';
 import { EvaluationReportModel } from '../models/mongodb/evaluation-report.model.js';
 import { ProblemModel } from '../models/mongodb/problem.model.js';
 import { GeminiAnalysisClient } from '@aica/ai-engine';
-import { createSuccessResponse, createErrorResponse } from '@aica/shared';
+import { createSuccessResponse, createErrorResponse, ComparisonCreateSchema } from '@aica/shared';
 
 const geminiClient = new GeminiAnalysisClient();
 
 export async function createComparison(req: Request, res: Response): Promise<void> {
-  const { submissionIdA, submissionIdB } = req.body;
-
-  if (!submissionIdA || !submissionIdB) {
-    res.status(400).json(createErrorResponse('INVALID_INPUT', 'Both submissionIdA and submissionIdB are required'));
+  const parseResult = ComparisonCreateSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json(
+      createErrorResponse('VALIDATION_ERROR', 'Invalid comparison request', [
+        { field: 'form', issue: parseResult.error.errors.map((e) => e.message).join(', ') }
+      ])
+    );
     return;
   }
+
+  const { submissionIdA, submissionIdB } = parseResult.data;
 
   try {
     const [subA, subB] = await Promise.all([
@@ -24,6 +29,14 @@ export async function createComparison(req: Request, res: Response): Promise<voi
 
     if (!subA || !subB) {
       res.status(404).json(createErrorResponse('NOT_FOUND', 'One or both submissions were not found'));
+      return;
+    }
+
+    // Ownership check: Student can compare their own submissions
+    const userId = req.user?.id;
+    const isStaff = req.user?.role === 'ADMIN' || req.user?.role === 'INSTRUCTOR';
+    if (userId && !isStaff && subA.userId !== userId && subB.userId !== userId) {
+      res.status(403).json(createErrorResponse('FORBIDDEN', 'You are only authorized to compare your own submissions'));
       return;
     }
 
@@ -47,18 +60,34 @@ export async function createComparison(req: Request, res: Response): Promise<voi
     const timeCompB = reportB?.aiAnalysis?.theoreticalComplexity?.timeComplexity || 'O(N)';
     const spaceCompB = reportB?.aiAnalysis?.theoreticalComplexity?.spaceComplexity || 'O(1)';
 
-    // Request AI evolutionary narrative
-    const aiComparison = await geminiClient.analyzeComparison({
-      problemTitle,
-      languageA: subA.language,
-      codeA: subA.code,
-      timeA: subA.executionTimeMs,
-      memA: subA.memoryUsedKb,
-      languageB: subB.language,
-      codeB: subB.code,
-      timeB: subB.executionTimeMs,
-      memB: subB.memoryUsedKb
-    });
+    // Deterministic baseline in case AI generation is deferred or times out
+    let aiComparison = {
+      timeComplexityComparison: `${timeCompA} vs ${timeCompB}`,
+      spaceComplexityComparison: `${spaceCompA} vs ${spaceCompB}`,
+      tradeOffSummary: subB.executionTimeMs < subA.executionTimeMs
+        ? `Approach B exhibits faster empirical execution runtime (${subB.executionTimeMs}ms vs ${subA.executionTimeMs}ms), optimizing computational efficiency.`
+        : `Approach A and Approach B demonstrate comparable execution profiles (${subA.executionTimeMs}ms vs ${subB.executionTimeMs}ms).`
+    };
+
+    try {
+      // Request AI evolutionary narrative from Gemini
+      const geminiResult = await geminiClient.analyzeComparison({
+        problemTitle,
+        languageA: subA.language,
+        codeA: subA.code,
+        timeA: subA.executionTimeMs,
+        memA: subA.memoryUsedKb,
+        languageB: subB.language,
+        codeB: subB.code,
+        timeB: subB.executionTimeMs,
+        memB: subB.memoryUsedKb
+      });
+      if (geminiResult && geminiResult.tradeOffSummary) {
+        aiComparison = geminiResult;
+      }
+    } catch (aiErr: any) {
+      console.warn('[ComparisonController] AI comparison generation deferred, using deterministic delta baseline:', aiErr.message);
+    }
 
     const comparisonDoc = await SolutionComparisonModel.create({
       problemId: subA.problemId,
@@ -104,6 +133,39 @@ export async function createComparison(req: Request, res: Response): Promise<voi
   } catch (err: any) {
     console.error('[ComparisonController] createComparison error:', err.message);
     res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to generate comparison'));
+  }
+}
+
+export async function getProblemComparison(req: Request, res: Response): Promise<void> {
+  const { problemId } = req.params;
+
+  try {
+    const userId = req.user?.id;
+    let query: Record<string, any> = { problemId };
+
+    if (userId) {
+      query = {
+        problemId,
+        $or: [{ 'submissionA.userId': userId }, { 'submissionB.userId': userId }]
+      };
+    }
+
+    let comparison = await SolutionComparisonModel.findOne(query).sort({ createdAt: -1 }).lean();
+
+    // Fallback: If no personal comparison exists, look for any recent comparison for this problem
+    if (!comparison && userId) {
+      comparison = await SolutionComparisonModel.findOne({ problemId }).sort({ createdAt: -1 }).lean();
+    }
+
+    if (!comparison) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'No comparison found for this problem'));
+      return;
+    }
+
+    res.status(200).json(createSuccessResponse(comparison));
+  } catch (err: any) {
+    console.error('[ComparisonController] getProblemComparison error:', err.message);
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve comparison'));
   }
 }
 

@@ -6,6 +6,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "seed": "pnpm --filter @aica/api seed",
     "lint": "turbo run lint",
     "test": "vitest run",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
@@ -15,6 +16,10 @@
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mongoose": "^5.11.97",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.11.4",
     "turbo": "^2.4.4",
     "typescript": "^5.8.2",
     "vitest": "^5.1.0"

@@ -15,6 +15,7 @@ import { AlgorithmDetailPage } from './pages/AlgorithmDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CreateProblemPage } from './pages/CreateProblemPage';
 import { AdminProblemReviewPage } from './pages/AdminProblemReviewPage';
+import { AdminProblemManagementPage } from './pages/AdminProblemManagementPage';
 import { useAuthStore } from './store/useAuthStore';
 import { Sparkles, ArrowRight, Cpu, ArrowLeftRight, Menu } from 'lucide-react';
 
@@ -34,25 +35,30 @@ function HomeRoute() {
 
 function AppLayout() {
   const location = useLocation();
+  const { isAuthenticated } = useAuthStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  // Exclude sidebar from authentication screens (login and register)
+  // Sidebar is shown ONLY when logged in and not on authentication screens
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const showSidebar = isAuthenticated && !isAuthPage;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-100 dark:selection:bg-emerald-900 selection:text-emerald-950 dark:selection:text-emerald-100 font-sans transition-colors duration-200">
       {/* Top Utility Header Bar with Profile & Logout dropdown */}
       {!isAuthPage && (
-        <TopHeader onOpenMobileSidebar={() => setMobileSidebarOpen(true)} />
+        <TopHeader
+          showSidebarToggle={showSidebar}
+          onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+        />
       )}
 
       <div className="flex-1 flex relative">
-        {!isAuthPage && (
+        {showSidebar && (
           <Sidebar
             mobileOpen={mobileSidebarOpen}
             onCloseMobile={() => setMobileSidebarOpen(false)}
           />
         )}
-        <div className={`flex-1 flex flex-col min-w-0 transition-[padding] duration-300 ${!isAuthPage ? 'md:pl-16' : ''}`}>
+        <div className={`flex-1 flex flex-col min-w-0 transition-[padding] duration-300 ${showSidebar ? 'md:pl-16' : ''}`}>
           <main className="flex-1 flex flex-col min-w-0">
             <Routes>
               <Route path="/" element={<HomeRoute />} />
@@ -65,6 +71,7 @@ function AppLayout() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/create-problem" element={<CreateProblemPage />} />
               <Route path="/admin/proposals" element={<AdminProblemReviewPage />} />
+              <Route path="/admin/problems" element={<AdminProblemManagementPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
             </Routes>

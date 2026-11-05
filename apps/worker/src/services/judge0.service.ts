@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { DEFAULT_RESOURCE_LIMITS } from '@aica/shared';
+import { DEFAULT_RESOURCE_LIMITS, JUDGE0_LANGUAGE_IDS, SupportedLanguage } from '@aica/shared';
+import { executeLocally } from './local-runner.service.js';
 
 export interface Judge0SubmissionInput {
   testCaseId: string;
@@ -27,6 +28,7 @@ export interface Judge0BatchResultItem {
 export class Judge0Service {
   private apiUrl: string;
   private apiKey?: string;
+  private fallbackResults = new Map<string, Judge0BatchResultItem>();
 
   constructor(apiUrl?: string, apiKey?: string) {
     this.apiUrl = (apiUrl || process.env.JUDGE0_API_URL || 'http://localhost:2358').replace(/\/+$/, '');
@@ -63,19 +65,27 @@ export class Judge0Service {
     }
 
     const payload = {
-      submissions: submissions.map((sub) => ({
-        source_code: Buffer.from(sub.sourceCode).toString('base64'),
-        language_id: sub.languageId,
-        stdin: Buffer.from(sub.stdin).toString('base64'),
-        expected_output: Buffer.from(sub.expectedOutput).toString('base64'),
-        cpu_time_limit: (sub.cpuTimeLimit || DEFAULT_RESOURCE_LIMITS.TIME_LIMIT_MS) / 1000,
-        cpu_extra_time: 0.5,
-        wall_time_limit: DEFAULT_RESOURCE_LIMITS.WALL_TIME_LIMIT_MS / 1000,
-        memory_limit: sub.memoryLimit || DEFAULT_RESOURCE_LIMITS.MEMORY_LIMIT_KB,
-        stack_limit: DEFAULT_RESOURCE_LIMITS.STACK_LIMIT_KB,
-        max_processes_and_or_threads: DEFAULT_RESOURCE_LIMITS.MAX_PROCESSES,
-        enable_network: false
-      }))
+      submissions: submissions.map((sub) => {
+        let code = sub.sourceCode;
+        if (sub.languageId === 71 && /\b(list|dict|tuple|set)\[/.test(code) && !code.includes('__future__')) {
+          code = `from __future__ import annotations\n${code}`;
+        }
+        return {
+          source_code: Buffer.from(code).toString('base64'),
+          language_id: sub.languageId,
+          stdin: Buffer.from(sub.stdin).toString('base64'),
+          expected_output: Buffer.from(sub.expectedOutput).toString('base64'),
+          cpu_time_limit: (sub.cpuTimeLimit || DEFAULT_RESOURCE_LIMITS.TIME_LIMIT_MS) / 1000,
+          cpu_extra_time: 0.5,
+          wall_time_limit: DEFAULT_RESOURCE_LIMITS.WALL_TIME_LIMIT_MS / 1000,
+          memory_limit: sub.memoryLimit || DEFAULT_RESOURCE_LIMITS.MEMORY_LIMIT_KB,
+          stack_limit: DEFAULT_RESOURCE_LIMITS.STACK_LIMIT_KB,
+          max_processes_and_or_threads: DEFAULT_RESOURCE_LIMITS.MAX_PROCESSES,
+          enable_network: false,
+          enable_per_process_and_thread_time_limit: true,
+          enable_per_process_and_thread_memory_limit: true
+        };
+      })
     };
 
     try {
@@ -97,8 +107,36 @@ export class Judge0Service {
         isPublic: submissions[idx].isPublic
       }));
     } catch (err: any) {
-      console.error('[Judge0Service] Batch submission failed:', err.message);
-      throw new Error(`SANDBOX_UNAVAILABLE: Failed to submit code execution batch to Judge0 (${err.message})`);
+      console.warn(`[Judge0Service] Judge0 unavailable (${err.message}). Using local execution fallback for submission batch.`);
+
+      return submissions.map((sub, idx) => {
+        const lang = (JUDGE0_LANGUAGE_IDS[sub.languageId] || 'python') as SupportedLanguage;
+        const res = executeLocally({
+          language: lang,
+          code: sub.sourceCode,
+          stdin: sub.stdin,
+          timeoutMs: sub.cpuTimeLimit ? Math.round(sub.cpuTimeLimit * 1000) : 5000
+        });
+
+        const token = `local-token-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`;
+        this.fallbackResults.set(token, {
+          token,
+          status_id: res.statusId,
+          status: { id: res.statusId, description: res.statusDescription },
+          stdout: res.stdout ? Buffer.from(res.stdout).toString('base64') : null,
+          stderr: res.stderr ? Buffer.from(res.stderr).toString('base64') : null,
+          compile_output: res.compileOutput ? Buffer.from(res.compileOutput).toString('base64') : null,
+          time: (res.executionTimeMs / 1000).toFixed(3),
+          memory: res.memoryUsedKb
+        });
+
+        return {
+          token,
+          testCaseId: sub.testCaseId,
+          index: sub.index,
+          isPublic: sub.isPublic
+        };
+      });
     }
   }
 
@@ -108,6 +146,20 @@ export class Judge0Service {
   ): Promise<Map<string, Judge0BatchResultItem>> {
     if (!tokens || tokens.length === 0) {
       return new Map();
+    }
+
+    // Check if tokens were handled by the local execution fallback
+    const allLocal = tokens.every((t) => this.fallbackResults.has(t));
+    if (allLocal) {
+      const localMap = new Map<string, Judge0BatchResultItem>();
+      for (const t of tokens) {
+        const item = this.fallbackResults.get(t);
+        if (item) {
+          localMap.set(t, item);
+          this.fallbackResults.delete(t);
+        }
+      }
+      return localMap;
     }
 
     const resultMap = new Map<string, Judge0BatchResultItem>();

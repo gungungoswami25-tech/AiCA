@@ -5,11 +5,13 @@ import { ProblemModel } from '../models/mongodb/problem.model.js';
 import { EvaluationReportModel } from '../models/mongodb/evaluation-report.model.js';
 import {
   SubmissionRequestSchema,
+  CustomRunRequestSchema,
   createSuccessResponse,
   createErrorResponse,
   LANGUAGE_CONFIGS,
   SupportedLanguage
 } from '@aica/shared';
+import { SandboxRunnerService } from '../services/sandbox-runner.service.js';
 import { redisClient } from '../config/db.js';
 
 // BullMQ Queue Producer
@@ -19,6 +21,14 @@ export const submissionQueue = new Queue('submission-queue', {
 
 submissionQueue.on('error', (err) => {
   console.warn('[SubmissionQueue] Redis queue warning:', err.message);
+});
+
+export const aiAnalysisQueue = new Queue('ai-analysis-queue', {
+  connection: redisClient
+});
+
+aiAnalysisQueue.on('error', (err) => {
+  console.warn('[AiAnalysisQueue] Redis queue warning:', err.message);
 });
 
 export async function createSubmission(req: Request, res: Response): Promise<void> {
@@ -37,10 +47,19 @@ export async function createSubmission(req: Request, res: Response): Promise<voi
   const username = req.user?.username || 'Guest';
 
   try {
-    // 1. Verify problem exists
-    const problem = await ProblemModel.findById(problemId);
+    // 1. Verify problem exists and is accessible (supports ObjectId or slug)
+    let problem: any = null;
+    try {
+      problem = await ProblemModel.findById(problemId);
+    } catch {
+      problem = null;
+    }
     if (!problem) {
-      res.status(404).json(createErrorResponse('NOT_FOUND', 'Target problem not found'));
+      problem = await ProblemModel.findOne({ slug: problemId });
+    }
+    const isStaff = req.user?.role === 'ADMIN' || req.user?.role === 'INSTRUCTOR';
+    if (!problem || (problem.status && problem.status !== 'PUBLISHED' && !isStaff)) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'Target problem not found or unpublished'));
       return;
     }
 
@@ -176,6 +195,139 @@ export async function getEvaluationReport(req: Request, res: Response): Promise<
   }
 }
 
+export async function retryAiAnalysis(req: Request, res: Response): Promise<void> {
+  const { submissionId } = req.params;
+
+  // 1. Authentication check
+  if (!req.user) {
+    res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication token required'));
+    return;
+  }
+
+  try {
+    const submission = await SubmissionModel.findById(submissionId);
+    if (!submission) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'Submission not found'));
+      return;
+    }
+
+    // 2. Ownership & Authorization check: Only submission owner or ADMIN can retry
+    const isOwner = req.user.id === submission.userId;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      res.status(403).json(
+        createErrorResponse('FORBIDDEN', 'You are not authorized to retry AI analysis for this submission')
+      );
+      return;
+    }
+
+    // 3. State validation: deterministic verdict must exist and not be CE
+    if (submission.verdict === 'PENDING') {
+      res.status(400).json(
+        createErrorResponse(
+          'INVALID_STATE',
+          'Deterministic evaluation is still pending. AI analysis cannot be initiated yet.'
+        )
+      );
+      return;
+    }
+
+    if (submission.verdict === 'COMPILATION_ERROR') {
+      res.status(400).json(
+        createErrorResponse(
+          'INVALID_STATE',
+          'AI analysis is bypassed for compilation errors.'
+        )
+      );
+      return;
+    }
+
+    // 4. Deduplication & Conflict check: Reject if already pending or processing
+    if (submission.aiStatus === 'PENDING') {
+      res.status(409).json(
+        createErrorResponse(
+          'CONFLICT',
+          'AI analysis is already pending or in progress for this submission'
+        )
+      );
+      return;
+    }
+
+    const jobId = `ai-analysis-${submissionId}`;
+
+    // Check BullMQ for active/waiting duplicate job and clean up retained completed/failed job
+    try {
+      const existingJob = await aiAnalysisQueue.getJob(jobId);
+      if (existingJob) {
+        const state = await existingJob.getState();
+        if (state === 'active' || state === 'waiting' || state === 'delayed') {
+          res.status(409).json(
+            createErrorResponse('CONFLICT', 'AI analysis job is currently active or queued')
+          );
+          return;
+        }
+        // Remove retained job so BullMQ accepts adding the job with the same deterministic jobId
+        await existingJob.remove();
+      }
+    } catch (qErr: any) {
+      console.warn('[SubmissionController] BullMQ job lookup warning:', qErr.message);
+    }
+
+    // Mark AI status as PENDING
+    await SubmissionModel.findByIdAndUpdate(submissionId, {
+      aiStatus: 'PENDING',
+      aiError: ''
+    });
+
+    await EvaluationReportModel.findOneAndUpdate(
+      { submissionId },
+      { $set: { 'aiAnalysis.status': 'PENDING' } }
+    );
+
+    // Enqueue to aiAnalysisQueue with deterministic jobId
+    await aiAnalysisQueue.add(
+      'analyze-submission-ai',
+      {
+        submissionId: submission._id.toString(),
+        problemId: submission.problemId,
+        userId: submission.userId,
+        username: submission.username,
+        language: submission.language,
+        code: submission.code,
+        verdict: submission.verdict,
+        executionTimeMs: submission.executionTimeMs,
+        memoryUsedKb: submission.memoryUsedKb,
+        passedCount: submission.testCasesPassed,
+        totalCount: submission.testCasesTotal,
+        compileOutput: submission.compileOutput,
+        isTestRun: submission.isTestRun
+      },
+      {
+        jobId,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: 100,
+        removeOnFail: 500
+      }
+    );
+
+    res.status(202).json(
+      createSuccessResponse(
+        {
+          submissionId: submission._id.toString(),
+          verdict: submission.verdict,
+          aiStatus: 'PENDING'
+        },
+        'AI analysis queued for asynchronous retry'
+      )
+    );
+  } catch (err: any) {
+    console.error('[SubmissionController] retryAiAnalysis error:', err.message);
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to schedule AI analysis retry'));
+  }
+}
+
 export async function getMySubmissions(req: Request, res: Response): Promise<void> {
   const userId = req.user?.id;
   if (!userId) {
@@ -304,72 +456,62 @@ export async function getActivityHeatmap(req: Request, res: Response): Promise<v
 }
 
 export async function runCustomCode(req: Request, res: Response): Promise<void> {
-  const { language, code, stdin = '' } = req.body;
-  if (!code || !language) {
-    res.status(400).json(createErrorResponse('VALIDATION_ERROR', 'Language and code are required'));
+  // 1. Authentication check
+  if (!req.user) {
+    res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication token required'));
     return;
   }
 
+  // 2. Schema validation (enforces non-empty code, max 64KB code, max 64KB stdin, supported language)
+  const parseResult = CustomRunRequestSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const issues = parseResult.error.errors.map((e) => ({
+      field: e.path.join('.'),
+      issue: e.message
+    }));
+    res.status(400).json(
+      createErrorResponse(
+        'VALIDATION_ERROR',
+        parseResult.error.errors[0]?.message || 'Invalid custom execution payload',
+        issues
+      )
+    );
+    return;
+  }
+
+  const { language, code, stdin } = parseResult.data;
+
+  // 3. Supported language check
   const langConfig = LANGUAGE_CONFIGS[language as SupportedLanguage];
   if (!langConfig) {
     res.status(400).json(createErrorResponse('UNSUPPORTED_LANGUAGE', 'Selected language is not supported'));
     return;
   }
 
-  const judge0Url = (process.env.JUDGE0_API_URL || 'http://localhost:2358').replace(/\/+$/, '');
-  const apiKey = process.env.JUDGE0_API_KEY;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
-  };
-  if (apiKey) {
-    headers['X-RapidAPI-Key'] = apiKey;
-  }
-
   try {
-    const payload = {
-      source_code: Buffer.from(code).toString('base64'),
-      language_id: langConfig.id,
-      stdin: Buffer.from(String(stdin || '')).toString('base64'),
-      cpu_time_limit: 5.0,
-      wall_time_limit: 10.0,
-      memory_limit: 262144,
-      enable_network: false
-    };
-
-    const response = await fetch(`${judge0Url}/submissions?base64_encoded=true&wait=true`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
+    // 4. Execute purely in Judge0 sandbox (Ephemeral - NO DB records, NO queue, NO AI, NO leaderboard)
+    const sandboxRunner = new SandboxRunnerService();
+    const result = await sandboxRunner.executeEphemeral({
+      language: language as SupportedLanguage,
+      code,
+      stdin: stdin || ''
     });
 
-    if (!response.ok) {
-      throw new Error(`Judge0 responded with HTTP ${response.status}`);
-    }
-
-    const data: any = await response.json();
-    const stdout = data.stdout ? Buffer.from(data.stdout, 'base64').toString('utf8') : '';
-    const stderr = data.stderr ? Buffer.from(data.stderr, 'base64').toString('utf8') : '';
-    const compileOutput = data.compile_output ? Buffer.from(data.compile_output, 'base64').toString('utf8') : '';
-    const execTimeMs = data.time ? Math.round(parseFloat(String(data.time)) * 1000) : 0;
-    const memKb = data.memory || 0;
-
     res.status(200).json(
-      createSuccessResponse(
-        {
-          stdout,
-          stderr,
-          compileOutput,
-          executionTimeMs: execTimeMs,
-          memoryUsedKb: memKb,
-          statusId: data.status_id,
-          statusDescription: data.status?.description || 'Executed'
-        },
-        'Custom code executed successfully'
-      )
+      createSuccessResponse(result, 'Custom code executed successfully in isolated sandbox')
     );
   } catch (err: any) {
     console.error('[SubmissionController] runCustomCode error:', err.message);
+    if (
+      err.name === 'TimeoutError' ||
+      err.message?.toLowerCase().includes('timed out') ||
+      err.message?.toLowerCase().includes('timeout')
+    ) {
+      res.status(504).json(
+        createErrorResponse('SANDBOX_TIMEOUT', 'Code execution sandbox timed out after 15000ms')
+      );
+      return;
+    }
     res.status(503).json(
       createErrorResponse('SANDBOX_UNAVAILABLE', `Code execution sandbox is unavailable: ${err.message}`)
     );

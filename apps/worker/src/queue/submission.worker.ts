@@ -4,8 +4,10 @@ import mongoose from 'mongoose';
 import { Judge0Service } from '../services/judge0.service.js';
 import { TestEvaluatorService } from '../services/test-evaluator.js';
 import { ScoringService } from '../services/scoring.service.js';
+import { AiEvaluatorService, AiEvaluationContext } from '../services/ai-evaluator.service.js';
+import { aiAnalysisQueue } from './ai-analysis.worker.js';
 import { GeminiAnalysisClient } from '@aica/ai-engine';
-import { PipelineStatus, Verdict, SupportedLanguage, sanitizeRedisUrl } from '@aica/shared';
+import { PipelineStatus, Verdict, SupportedLanguage, AIAnalysisStatus, sanitizeRedisUrl } from '@aica/shared';
 
 // Initialize Services with TLS support & URL sanitization
 const redisUrl = sanitizeRedisUrl(process.env.REDIS_URL);
@@ -37,6 +39,7 @@ redisPublisher.on('error', (err) => {
 
 const judge0 = new Judge0Service();
 const aiClient = new GeminiAnalysisClient();
+const aiEvaluator = new AiEvaluatorService(aiClient);
 
 // Helper to publish live SSE progress events
 async function publishProgress(
@@ -155,63 +158,29 @@ export function startSubmissionWorker(): Worker {
 
         const outcome = TestEvaluatorService.evaluateBatch(tokenMappings, judge0Results);
 
-        // Step 3: AI Analysis Stage (for syntactically valid code)
-        let aiReportPartial: any = {
-          status: 'SKIPPED',
-          mode: 'OPTIMIZATION',
-          codeSummary: 'Compilation failed. AI analysis bypassed.',
-          theoreticalComplexity: { timeComplexity: 'N/A', spaceComplexity: 'N/A', explanation: '' },
-          codeQuality: { score: 1, readabilityAnalysis: '', codeSmells: [], positivePractices: [] },
-          optimizationSuggestions: []
-        };
-
-        if (outcome.verdict !== 'COMPILATION_ERROR') {
-          await publishProgress(submissionId, 'ANALYZING_AI', outcome.verdict, 3, 4);
-          await submissionsCol.updateOne(
-            { _id: new mongoose.Types.ObjectId(submissionId) },
-            { $set: { pipelineStatus: 'ANALYZING_AI', verdict: outcome.verdict } }
-          );
-
-          if (outcome.verdict === 'ACCEPTED') {
-            aiReportPartial = await aiClient.analyzeAcceptedSolution({
-              problemTitle: problem.title,
-              problemDescription: problem.description,
-              constraints: problem.constraints || [],
-              language,
-              code,
-              executionTimeMs: outcome.maxExecutionTimeMs,
-              memoryKb: outcome.maxMemoryKb
-            });
-          } else {
-            // Mode B: Diagnostic analysis for incorrect solutions (WA, TLE, RE)
-            aiReportPartial = await aiClient.analyzeDiagnosticSolution({
-              problemTitle: problem.title,
-              problemDescription: problem.description,
-              constraints: problem.constraints || [],
-              language,
-              code,
-              verdict: outcome.verdict,
-              failedTestSummary: `Failed with ${outcome.verdict} on test evaluation. Passed ${outcome.passedCount}/${outcome.totalCount} test cases.`,
-              errorMessage: outcome.compileOutput
-            });
-          }
-        }
-
-        // Step 4: Scoring & Normalization
-        const scoring = ScoringService.calculate({
+        // STAGE 1: Deterministic Evaluation & Verdict Finalization (P0 Isolation)
+        // Correctness verdict is strictly computed deterministically from test cases
+        const initialScoring = ScoringService.calculate({
           verdict: outcome.verdict,
           passedCount: outcome.passedCount,
           totalCount: outcome.totalCount,
           language: language as SupportedLanguage,
           executionTimeMs: outcome.maxExecutionTimeMs,
           memoryUsedKb: outcome.maxMemoryKb,
-          aiQualityScore: aiReportPartial?.codeQuality?.score || 7.5,
+          aiQualityScore: 7.0, // Neutral baseline until AI finishes
           targetTimeMs: problem.benchmarks?.targetTimeMs || 15,
           timeLimitMs: problem.timeLimitMs,
           memoryLimitKb: problem.memoryLimitKb
         });
 
-        // Persist Evaluation Report Document in MongoDB
+        const initialAiStatus: AIAnalysisStatus =
+          outcome.verdict === 'COMPILATION_ERROR' ? 'SKIPPED' : 'PENDING';
+        const initialAiSummary =
+          outcome.verdict === 'COMPILATION_ERROR'
+            ? 'Compilation failed. AI analysis bypassed.'
+            : 'Deterministic evaluation complete. AI analysis pending.';
+
+        // 1. Persist Initial Evaluation Report Document in MongoDB FIRST
         const reportInsert = await reportsCol.insertOne({
           submissionId,
           userId,
@@ -220,13 +189,26 @@ export function startSubmissionWorker(): Worker {
           verdict: outcome.verdict,
           pipelineStatus: 'COMPLETED',
           summary: `Evaluated ${outcome.totalCount} test cases. Verdict: ${outcome.verdict}.`,
-          aiAnalysis: aiReportPartial,
+          aiAnalysis: {
+            status: initialAiStatus,
+            mode: outcome.verdict === 'ACCEPTED' ? 'OPTIMIZATION' : 'DIAGNOSTIC',
+            codeSummary: initialAiSummary,
+            theoreticalComplexity: { timeComplexity: 'N/A', spaceComplexity: 'N/A', explanation: '' },
+            codeQuality: {
+              score: outcome.verdict === 'COMPILATION_ERROR' ? 1.0 : 7.0,
+              readabilityAnalysis: '',
+              codeSmells: [],
+              positivePractices: []
+            },
+            optimizationSuggestions: [],
+            generatedAt: new Date().toISOString()
+          },
           metrics: {
             rawTimeMs: outcome.maxExecutionTimeMs,
-            normalizedTimeMs: scoring.normalizedTimeMs,
+            normalizedTimeMs: initialScoring.normalizedTimeMs,
             rawMemoryKb: outcome.maxMemoryKb,
-            normalizedMemoryKb: scoring.normalizedMemoryKb,
-            compositeScore: scoring.compositeScore,
+            normalizedMemoryKb: initialScoring.normalizedMemoryKb,
+            compositeScore: initialScoring.compositeScore,
             percentileTime: 85,
             percentileMemory: 80
           },
@@ -235,7 +217,8 @@ export function startSubmissionWorker(): Worker {
 
         const reportId = reportInsert.insertedId.toString();
 
-        // Update Submission Record with final outcome
+        // 2. PERSIST DETERMINISTIC VERDICT TO SUBMISSION DOCUMENT IMMEDIATELY (BEFORE ANY REDIS/AI OPERATIONS)
+        // Invariant: verdict is now permanently locked in MongoDB and can NEVER be overwritten by Redis or AI failures
         await submissionsCol.updateOne(
           { _id: new mongoose.Types.ObjectId(submissionId) },
           {
@@ -244,48 +227,155 @@ export function startSubmissionWorker(): Worker {
               verdict: outcome.verdict,
               executionTimeMs: outcome.maxExecutionTimeMs,
               memoryUsedKb: outcome.maxMemoryKb,
-              normalizedTimeMs: scoring.normalizedTimeMs,
-              compositeScore: scoring.compositeScore,
+              normalizedTimeMs: initialScoring.normalizedTimeMs,
+              compositeScore: initialScoring.compositeScore,
               compileOutput: outcome.compileOutput,
               testCasesTotal: outcome.totalCount,
               testCasesPassed: outcome.passedCount,
               testResults: outcome.testResults,
               evaluationReportId: reportId,
+              aiStatus: initialAiStatus,
+              leaderboardSyncPending: false,
               updatedAt: new Date()
             }
           }
         );
 
-        // Update Leaderboard Redis Sorted Set if Accepted
-        if (outcome.verdict === 'ACCEPTED' && !isTestRun) {
-          const zsetKey = `leaderboard:problem:${problemId}`;
-          await redisPublisher.zadd(zsetKey, scoring.compositeScore, submissionId);
+        console.log(
+          `[SubmissionWorker] Deterministic verdict locked for ${submissionId}: ${outcome.verdict} (Passed: ${outcome.passedCount}/${outcome.totalCount})`
+        );
+
+        // 2b. Atomically increment problem submission counters (fault-tolerant)
+        if (!isTestRun) {
+          try {
+            const probQuery = mongoose.Types.ObjectId.isValid(problemId)
+              ? { _id: new mongoose.Types.ObjectId(problemId) }
+              : { slug: problemId };
+            await problemsCol.updateOne(probQuery, {
+              $inc: {
+                totalSubmissions: 1,
+                ...(outcome.verdict === 'ACCEPTED' ? { acceptedSubmissions: 1 } : {})
+              }
+            });
+          } catch (probIncErr: any) {
+            console.warn(`[SubmissionWorker] Problem counter increment warning for problem ${problemId}:`, probIncErr.message);
+          }
         }
 
-        // Step 5: Complete & Publish final SSE event
-        await publishProgress(submissionId, 'COMPLETED', outcome.verdict, 4, 4, {
-          reportId,
-          compositeScore: scoring.compositeScore
-        });
+        // 3. Update Leaderboard in Redis (Fault-tolerant; executed strictly AFTER MongoDB persistence)
+        if (outcome.verdict === 'ACCEPTED' && !isTestRun) {
+          try {
+            const zsetKey = `leaderboard:problem:${problemId}`;
+            await redisPublisher.zadd(zsetKey, initialScoring.compositeScore, submissionId);
+          } catch (redisErr: any) {
+            console.warn(`[SubmissionWorker] Leaderboard Redis update failed for submission ${submissionId}:`, redisErr.message);
+            // Leaderboard Redis failure must NEVER fail the submission evaluation or alter verdict!
+            try {
+              await submissionsCol.updateOne(
+                { _id: new mongoose.Types.ObjectId(submissionId) },
+                { $set: { leaderboardSyncPending: true } }
+              );
+            } catch {}
+          }
+        }
 
-        console.log(
-          `[SubmissionWorker] Completed submission ${submissionId}: ${outcome.verdict} (Score: ${scoring.compositeScore})`
-        );
+        // STAGE 2: Decoupled & Isolated AI Analysis Execution
+        if (outcome.verdict === 'COMPILATION_ERROR') {
+          await publishProgress(submissionId, 'COMPLETED', outcome.verdict, 4, 4, {
+            reportId,
+            compositeScore: initialScoring.compositeScore,
+            aiStatus: 'SKIPPED'
+          });
+        } else {
+          await publishProgress(submissionId, 'ANALYZING_AI', outcome.verdict, 3, 4, {
+            reportId,
+            compositeScore: initialScoring.compositeScore,
+            aiStatus: 'PENDING'
+          });
+
+          const aiContext: AiEvaluationContext = {
+            submissionId,
+            problemId,
+            userId,
+            username,
+            language,
+            code,
+            verdict: outcome.verdict,
+            executionTimeMs: outcome.maxExecutionTimeMs,
+            memoryUsedKb: outcome.maxMemoryKb,
+            passedCount: outcome.passedCount,
+            totalCount: outcome.totalCount,
+            compileOutput: outcome.compileOutput,
+            isTestRun
+          };
+
+          const runInline =
+            process.env.INLINE_AI === 'true' || process.env.NODE_ENV === 'test';
+
+          if (runInline) {
+            try {
+              await aiEvaluator.evaluateSubmissionAi(aiContext, {
+                db,
+                publishProgress: publishProgress as any,
+                redisPublisher,
+                timeoutMs: 15000
+              });
+            } catch (inlineErr: any) {
+              console.warn('[SubmissionWorker] Inline AI evaluation trapped error:', inlineErr.message);
+            }
+          } else {
+            try {
+              await aiAnalysisQueue.add('analyze-submission-ai', aiContext, {
+                jobId: `ai-analysis-${submissionId}`,
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 2000 },
+                removeOnComplete: 100,
+                removeOnFail: 500
+              });
+            } catch (queueErr: any) {
+              console.warn('[SubmissionWorker] Queue dispatch failed, falling back to safe inline evaluation:', queueErr.message);
+              try {
+                await aiEvaluator.evaluateSubmissionAi(aiContext, {
+                  db,
+                  publishProgress: publishProgress as any,
+                  redisPublisher,
+                  timeoutMs: 15000
+                });
+              } catch (fallbackErr: any) {
+                console.warn('[SubmissionWorker] Fallback inline AI evaluation trapped error:', fallbackErr.message);
+              }
+            }
+          }
+        }
       } catch (err: any) {
-        console.error(`[SubmissionWorker] Error evaluating submission ${submissionId}:`, err.message);
+        console.error(`[SubmissionWorker] Error in submission execution for ${submissionId}:`, err.message);
+
+        // SAFETY GUARD: Check if deterministic verdict was already established
+        const currentSub = await submissionsCol.findOne({
+          _id: new mongoose.Types.ObjectId(submissionId)
+        });
+        const existingVerdict = currentSub?.verdict;
+        const hasDeterministicVerdict = existingVerdict && existingVerdict !== 'PENDING';
+        const safeVerdict = hasDeterministicVerdict ? existingVerdict : 'INTERNAL_ERROR';
+
         await submissionsCol.updateOne(
           { _id: new mongoose.Types.ObjectId(submissionId) },
           {
             $set: {
-              pipelineStatus: 'FAILED',
-              verdict: 'INTERNAL_ERROR',
+              pipelineStatus: hasDeterministicVerdict ? 'COMPLETED' : 'FAILED',
+              verdict: safeVerdict,
               updatedAt: new Date()
             }
           }
         );
-        await publishProgress(submissionId, 'FAILED', 'INTERNAL_ERROR', 4, 4, {
-          error: err.message
-        });
+        await publishProgress(
+          submissionId,
+          hasDeterministicVerdict ? 'COMPLETED' : 'FAILED',
+          safeVerdict,
+          4,
+          4,
+          { error: err.message }
+        );
       }
     },
     { connection, concurrency: 5 }
