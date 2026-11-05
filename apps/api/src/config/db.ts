@@ -5,12 +5,17 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { POSTGRES_SCHEMA_SQL } from '../models/postgres/schema.js';
+import { sanitizeMongoUri } from '@aica/shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load root .env first, then local .env if present
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+const rootEnvConfig = dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+// A blank exported variable should not mask a usable key saved in the root .env.
+if (!process.env.OPENAI_API_KEY?.trim() && rootEnvConfig.parsed?.OPENAI_API_KEY?.trim()) {
+  process.env.OPENAI_API_KEY = rootEnvConfig.parsed.OPENAI_API_KEY.trim();
+}
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
@@ -111,7 +116,7 @@ export async function initializeDatabases(): Promise<void> {
 
   // 2. Connect to MongoDB with sanitized URI
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/aica_lab';
+    const mongoUri = sanitizeMongoUri(process.env.MONGODB_URI);
     await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000
     });

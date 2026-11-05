@@ -11,6 +11,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AlgorithmsPage } from './pages/AlgorithmsPage';
+import { AlgorithmDetailPage } from './pages/AlgorithmDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CreateProblemPage } from './pages/CreateProblemPage';
 import { AdminProblemReviewPage } from './pages/AdminProblemReviewPage';
@@ -57,6 +58,7 @@ function AppLayout() {
               <Route path="/" element={<HomeRoute />} />
               <Route path="/problems" element={<ProblemListPage />} />
               <Route path="/algorithms" element={<AlgorithmsPage />} />
+              <Route path="/algorithms/:slug" element={<AlgorithmDetailPage />} />
               <Route path="/workspace/:id" element={<WorkspacePage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />

@@ -7,6 +7,20 @@ import {
   DiagnosticFeedback
 } from '@aica/shared';
 
+export const AlgorithmGenerationSchema = z.object({
+  isAlgorithm: z.boolean(),
+  name: z.string().min(2),
+  category: z.string().min(2),
+  description: z.string().min(10),
+  timeComplexity: z.string().min(1),
+  spaceComplexity: z.string().min(1),
+  code: z.object({
+    javascript: z.string().min(1),
+    python: z.string().min(1)
+  }),
+  steps: z.array(z.string().min(1)).min(2).max(10)
+});
+
 export const OptimizationResponseSchema = z.object({
   codeSummary: z.string(),
   timeComplexity: z.string(),

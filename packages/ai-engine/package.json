@@ -1,7 +1,7 @@
 {
   "name": "@aica/ai-engine",
   "version": "1.0.0",
-  "description": "AI Code Analysis, Complexity & Diagnostic Engine powered by Google Gemini",
+  "description": "AI Code Analysis, Complexity & Diagnostic Engine powered by Gemini and OpenAI",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
