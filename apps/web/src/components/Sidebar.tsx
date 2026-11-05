@@ -165,57 +165,24 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
                 : 'w-16 shadow-xs')
         }`}
       >
-        {/* Top Section: Brand Header & Navigation List */}
+        {/* Navigation List */}
         <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
-          {/* Logo & Application Name at the Top */}
-          <div className="h-14 flex items-center px-3 border-b border-slate-200/80 dark:border-slate-800 shrink-0">
-            <Link
-              to="/"
-              onClick={() => {
-                if (onCloseMobile) onCloseMobile();
-              }}
-              className="flex items-center gap-2.5 w-full group overflow-hidden"
-              title="AI Code Evolution Lab"
-            >
-              {/* Perfectly aligned Logo Container */}
-              <div className="w-10 h-10 flex items-center justify-center shrink-0">
-                <img src="/logo.png" alt="GV2 Logo" className="w-7 h-7 object-contain" />
-              </div>
-
-              {/* Smooth Expanding Application Name */}
-              <div
-                className={`flex-1 flex flex-col overflow-hidden whitespace-nowrap transition-all duration-200 ${
-                  isExpanded
-                    ? 'opacity-100 translate-x-0'
-                    : 'opacity-0 -translate-x-2 pointer-events-none w-0'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate">
-                    AI Code Lab
-                  </span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono">
-                    GV2
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate">
-                  Evolution Platform
-                </span>
-              </div>
-            </Link>
-
-            {/* Mobile Drawer Close Button */}
-            {mobileOpen && (
+          {/* Mobile Drawer Close Header (Only on mobile drawer) */}
+          {mobileOpen && (
+            <div className="h-14 flex items-center justify-between px-4 border-b border-slate-200/80 dark:border-slate-800 shrink-0 md:hidden">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Menu
+              </span>
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden ml-auto cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 aria-label="Close Sidebar"
               >
                 <X className="w-5 h-5" />
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Navigation Links List */}
           <nav className="space-y-1.5 px-2.5 pt-3 pb-4">
