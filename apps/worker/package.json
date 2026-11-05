@@ -2,6 +2,7 @@
   "name": "@aica/worker",
   "version": "1.0.0",
   "description": "BullMQ Background Worker for Isolated Code Execution & Scoring",
+  "type": "module",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc",

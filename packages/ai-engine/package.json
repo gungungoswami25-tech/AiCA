@@ -2,8 +2,16 @@
   "name": "@aica/ai-engine",
   "version": "1.0.0",
   "description": "AI Code Analysis, Complexity & Diagnostic Engine powered by Google Gemini",
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
