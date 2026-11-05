@@ -109,7 +109,7 @@ export function WorkspacePage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
       {/* Workspace Subheader */}
       <div className="px-6 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
