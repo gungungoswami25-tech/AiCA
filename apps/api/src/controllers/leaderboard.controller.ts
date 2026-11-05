@@ -16,20 +16,35 @@ export async function getProblemLeaderboard(req: Request, res: Response): Promis
 
   try {
     // Correctness Gate: ONLY ACCEPTED submissions are eligible for leaderboard ranking!
-    const query = {
+    const matchQuery = {
       problemId,
       verdict: 'ACCEPTED',
       isTestRun: false
     };
 
-    const [submissions, totalRanked] = await Promise.all([
-      SubmissionModel.find(query)
-        .sort({ compositeScore: -1, normalizedTimeMs: 1, memoryUsedKb: 1, createdAt: 1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      SubmissionModel.countDocuments(query)
-    ]);
+    // Deduplicate by userId: Each student appears at most once with their best composite score
+    const pipeline: any[] = [
+      { $match: matchQuery },
+      { $sort: { compositeScore: -1, normalizedTimeMs: 1, memoryUsedKb: 1, createdAt: 1 } },
+      {
+        $group: {
+          _id: '$userId',
+          bestSubmission: { $first: '$$ROOT' }
+        }
+      },
+      { $replaceRoot: { newRoot: '$bestSubmission' } },
+      { $sort: { compositeScore: -1, normalizedTimeMs: 1, memoryUsedKb: 1, createdAt: 1 } },
+      {
+        $facet: {
+          rankings: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }]
+        }
+      }
+    ];
+
+    const aggResult = await SubmissionModel.aggregate(pipeline);
+    const submissions = aggResult[0]?.rankings || [];
+    const totalRanked = aggResult[0]?.totalCount[0]?.count || 0;
 
     const rankings: LeaderboardEntry[] = await Promise.all(
       submissions.map(async (sub: any, index: number) => {

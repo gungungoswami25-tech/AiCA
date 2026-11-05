@@ -11,7 +11,23 @@ export interface EvaluatedTestOutcome {
   testResults: TestResultItem[];
 }
 
+// Precedence ranking for competitive programming verdicts
+const VERDICT_PRIORITY: Record<Verdict, number> = {
+  COMPILATION_ERROR: 100,
+  RUNTIME_ERROR: 80,
+  TIME_LIMIT_EXCEEDED: 70,
+  MEMORY_LIMIT_EXCEEDED: 60,
+  WRONG_ANSWER: 50,
+  INTERNAL_ERROR: 40,
+  ACCEPTED: 10,
+  PENDING: 0
+};
+
 export class TestEvaluatorService {
+  public static getHigherPriorityVerdict(v1: Verdict, v2: Verdict): Verdict {
+    return (VERDICT_PRIORITY[v2] || 0) > (VERDICT_PRIORITY[v1] || 0) ? v2 : v1;
+  }
+
   public static decodeBase64(str?: string | null): string {
     if (!str) return '';
     try {
@@ -38,11 +54,27 @@ export class TestEvaluatorService {
       return true;
     }
 
-    // Attempt floating point comparison with epsilon = 1e-6
-    const numActual = parseFloat(actual);
-    const numExpected = parseFloat(expected);
-    if (!isNaN(numActual) && !isNaN(numExpected)) {
-      return Math.abs(numActual - numExpected) <= 1e-6;
+    // Token-based comparison (handles whitespace, multiple numbers, and float tolerance)
+    const actualTokens = actual.split(/\s+/).filter(Boolean);
+    const expectedTokens = expected.split(/\s+/).filter(Boolean);
+
+    if (actualTokens.length > 0 && actualTokens.length === expectedTokens.length) {
+      let allTokensMatch = true;
+      for (let i = 0; i < actualTokens.length; i++) {
+        const a = actualTokens[i];
+        const e = expectedTokens[i];
+        if (a === e) continue;
+
+        const numA = parseFloat(a);
+        const numE = parseFloat(e);
+        if (!isNaN(numA) && !isNaN(numE) && Math.abs(numA - numE) <= 1e-6) {
+          continue;
+        }
+
+        allTokensMatch = false;
+        break;
+      }
+      if (allTokensMatch) return true;
     }
 
     return false;
@@ -80,18 +112,23 @@ export class TestEvaluatorService {
 
       let passed = false;
       let errorMsg: string | undefined;
+      let caseVerdict: Verdict = 'ACCEPTED';
 
       if (statusId === 6 || statusId === 14) {
         // Compilation Error
-        aggregateVerdict = 'COMPILATION_ERROR';
+        caseVerdict = 'COMPILATION_ERROR';
         errorMsg = compileOutput || stderr || 'Compilation failed';
       } else if (statusId === 5) {
         // Time Limit Exceeded
-        if (aggregateVerdict === 'ACCEPTED') aggregateVerdict = 'TIME_LIMIT_EXCEEDED';
+        caseVerdict = 'TIME_LIMIT_EXCEEDED';
         errorMsg = 'Time Limit Exceeded';
-      } else if (statusId >= 7 && statusId <= 12) {
-        // Runtime Error
-        if (aggregateVerdict === 'ACCEPTED') aggregateVerdict = 'RUNTIME_ERROR';
+      } else if (statusId === 12) {
+        // Memory Limit Exceeded
+        caseVerdict = 'MEMORY_LIMIT_EXCEEDED';
+        errorMsg = 'Memory Limit Exceeded';
+      } else if (statusId >= 7 && statusId <= 11) {
+        // Runtime Error (SIGSEGV, SIGFPE, SIGKILL, etc.)
+        caseVerdict = 'RUNTIME_ERROR';
         errorMsg = stderr || 'Runtime error encountered';
       } else if (statusId === 3) {
         // Exit code 0 -> Check output equality
@@ -99,17 +136,20 @@ export class TestEvaluatorService {
         if (isMatch) {
           passed = true;
           passedCount++;
+          caseVerdict = 'ACCEPTED';
         } else {
-          if (aggregateVerdict === 'ACCEPTED') aggregateVerdict = 'WRONG_ANSWER';
+          caseVerdict = 'WRONG_ANSWER';
           errorMsg = 'Output mismatch';
         }
       } else if (statusId === 4) {
-        if (aggregateVerdict === 'ACCEPTED') aggregateVerdict = 'WRONG_ANSWER';
+        caseVerdict = 'WRONG_ANSWER';
         errorMsg = 'Output mismatch';
       } else {
-        if (aggregateVerdict === 'ACCEPTED') aggregateVerdict = 'INTERNAL_ERROR';
+        caseVerdict = 'INTERNAL_ERROR';
         errorMsg = 'Execution engine error';
       }
+
+      aggregateVerdict = this.getHigherPriorityVerdict(aggregateVerdict, caseVerdict);
 
       testResults.push({
         testCaseId: mapping.testCaseId,

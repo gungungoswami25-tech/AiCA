@@ -29,7 +29,7 @@ export class Judge0Service {
   private apiKey?: string;
 
   constructor(apiUrl?: string, apiKey?: string) {
-    this.apiUrl = apiUrl || process.env.JUDGE0_API_URL || 'http://localhost:2358';
+    this.apiUrl = (apiUrl || process.env.JUDGE0_API_URL || 'http://localhost:2358').replace(/\/+$/, '');
     this.apiKey = apiKey || process.env.JUDGE0_API_KEY;
   }
 
@@ -43,9 +43,25 @@ export class Judge0Service {
     return headers;
   }
 
+  public async checkHealth(): Promise<boolean> {
+    try {
+      const response = await axios.get(`${this.apiUrl}/system_info`, {
+        headers: this.getHeaders(),
+        timeout: 4000
+      });
+      return response.status === 200;
+    } catch {
+      return false;
+    }
+  }
+
   public async submitBatch(
     submissions: Judge0SubmissionInput[]
   ): Promise<Array<{ token: string; testCaseId: string; index: number; isPublic: boolean }>> {
+    if (!submissions || submissions.length === 0) {
+      return [];
+    }
+
     const payload = {
       submissions: submissions.map((sub) => ({
         source_code: Buffer.from(sub.sourceCode).toString('base64'),
@@ -66,10 +82,14 @@ export class Judge0Service {
       const response = await axios.post(
         `${this.apiUrl}/submissions/batch?base64_encoded=true`,
         payload,
-        { headers: this.getHeaders(), timeout: 10000 }
+        { headers: this.getHeaders(), timeout: 12000 }
       );
 
       const returnedTokens: Array<{ token: string }> = response.data;
+      if (!Array.isArray(returnedTokens) || returnedTokens.length === 0) {
+        throw new Error('Judge0 returned invalid batch response format');
+      }
+
       return returnedTokens.map((item, idx) => ({
         token: item.token,
         testCaseId: submissions[idx].testCaseId,
@@ -77,35 +97,33 @@ export class Judge0Service {
         isPublic: submissions[idx].isPublic
       }));
     } catch (err: any) {
-      console.warn('[Judge0Service] Batch submission deferred/mocked:', err.message);
-      // Fallback mock token generator for local development when Docker sandbox is offline
-      return submissions.map((sub, idx) => ({
-        token: `mock-token-${Date.now()}-${idx}`,
-        testCaseId: sub.testCaseId,
-        index: sub.index,
-        isPublic: sub.isPublic
-      }));
+      console.error('[Judge0Service] Batch submission failed:', err.message);
+      throw new Error(`SANDBOX_UNAVAILABLE: Failed to submit code execution batch to Judge0 (${err.message})`);
     }
   }
 
   public async pollBatchResults(
     tokens: string[],
-    maxWaitMs = 15000
+    maxWaitMs = 25000
   ): Promise<Map<string, Judge0BatchResultItem>> {
+    if (!tokens || tokens.length === 0) {
+      return new Map();
+    }
+
     const resultMap = new Map<string, Judge0BatchResultItem>();
     const startTime = Date.now();
-    let delay = 500;
+    let delay = 400;
 
     const tokenList = tokens.join(',');
 
     while (Date.now() - startTime < maxWaitMs) {
       await new Promise((resolve) => setTimeout(resolve, delay));
-      delay = Math.min(delay + 250, 1500);
+      delay = Math.min(delay + 200, 1500);
 
       try {
         const response = await axios.get(
           `${this.apiUrl}/submissions/batch?tokens=${tokenList}&base64_encoded=true&fields=token,status_id,status,stdout,stderr,compile_output,time,memory`,
-          { headers: this.getHeaders(), timeout: 5000 }
+          { headers: this.getHeaders(), timeout: 6000 }
         );
 
         const items: Judge0BatchResultItem[] = response.data.submissions || [];
@@ -122,22 +140,14 @@ export class Judge0Service {
           return resultMap;
         }
       } catch (err: any) {
-        console.warn('[Judge0Service] Polling retry:', err.message);
-        // If mocked tokens or offline sandbox, return simulated passing output
-        for (const token of tokens) {
-          resultMap.set(token, {
-            token,
-            status_id: 3,
-            status: { id: 3, description: 'Accepted' },
-            stdout: Buffer.from('[0,1]').toString('base64'),
-            time: '0.035',
-            memory: 14200
-          });
-        }
-        return resultMap;
+        console.warn(`[Judge0Service] Polling retry error (${err.message}). Retrying...`);
       }
     }
 
-    return resultMap;
+    if (resultMap.size > 0) {
+      return resultMap;
+    }
+
+    throw new Error('SANDBOX_TIMEOUT: Timed out waiting for Judge0 sandbox results');
   }
 }

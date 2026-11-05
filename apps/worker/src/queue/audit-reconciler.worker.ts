@@ -53,7 +53,7 @@ export function startAuditReconcilerWorker(): Worker {
       console.log(`[AuditReconciler] Processing outbox record ${outboxId}`);
 
       const db = mongoose.connection;
-      const outboxCol = db.collection('publication_outboxes');
+      const outboxCol = db.collection('publicationoutboxes');
 
       try {
         const outboxRecord = await outboxCol.findOne({ _id: new mongoose.Types.ObjectId(outboxId) });
