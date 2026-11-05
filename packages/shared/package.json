@@ -1,0 +1,19 @@
+{
+  "name": "@aica/shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types, Zod schemas and constants for AI Code Evolution Lab",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@aica/ai-engine",
+  "version": "1.0.0",
+  "description": "AI Code Analysis, Complexity & Diagnostic Engine powered by Google Gemini",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aica/shared": "workspace:*",
+    "@google/genai": "^2.32.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

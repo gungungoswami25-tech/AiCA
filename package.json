@@ -1,0 +1,18 @@
+{
+  "name": "ai-code-evolution-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Code Evolution Lab — Collaborative & Pedagogical Code Evaluation Platform",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2"
+  },
+  "packageManager": "pnpm@12.14.0"
+}
