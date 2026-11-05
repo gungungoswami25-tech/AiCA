@@ -1,3 +1,4 @@
+import algorithmRoutes from './routes/algorithm.routes.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -42,6 +43,7 @@ app.get('/health', (_, res) => {
 // Mount Domain API Routes (v1)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/problems', problemRoutes);
+app.use('/api/v1/algorithms', algorithmRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/leaderboards', leaderboardRoutes);
 app.use('/api/v1/comparisons', comparisonRoutes);
