@@ -77,3 +77,15 @@ export interface SubmissionStatusStreamEvent {
   aiStatus?: AIAnalysisStatus;
   compositeScore?: number;
 }
+
+export interface CustomRunResult {
+  stdout: string;
+  stderr: string;
+  compileOutput: string;
+  executionTimeMs: number;
+  memoryUsedKb: number;
+  statusId: number;
+  statusDescription: string;
+  isError: boolean;
+  verdict: Verdict;
+}

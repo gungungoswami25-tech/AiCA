@@ -14,7 +14,7 @@ import { handleSubmissionStatusSSE } from '../middleware/sse.middleware.js';
 
 const router = Router();
 
-router.post('/run-custom', optionalAuth, submissionRateLimiter, runCustomCode);
+router.post('/run-custom', authenticateToken, submissionRateLimiter, runCustomCode);
 router.post('/', optionalAuth, submissionRateLimiter, createSubmission);
 router.get('/my', authenticateToken, getMySubmissions);
 router.get('/activity-heatmap', authenticateToken, getActivityHeatmap);
