@@ -64,7 +64,8 @@ const SubmissionSchema = new Schema<SubmissionDocument>({
     default: 'PENDING',
     index: true
   },
-  aiError: { type: String, default: '' }
+  aiError: { type: String, default: '' },
+  leaderboardSyncPending: { type: Boolean, default: false }
 }, {
   timestamps: true,
   toJSON: {

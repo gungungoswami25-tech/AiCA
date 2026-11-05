@@ -54,6 +54,7 @@ export interface Submission {
   evaluationReportId?: string;
   aiStatus?: AIAnalysisStatus;
   aiError?: string;
+  leaderboardSyncPending?: boolean;
   createdAt: string;
   updatedAt: string;
 }

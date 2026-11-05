@@ -21,6 +21,6 @@ router.get('/activity-heatmap', authenticateToken, getActivityHeatmap);
 router.get('/:id', optionalAuth, getSubmissionById);
 router.get('/:id/status-stream', optionalAuth, handleSubmissionStatusSSE);
 router.get('/:submissionId/report', optionalAuth, getEvaluationReport);
-router.post('/:submissionId/retry-ai', optionalAuth, retryAiAnalysis);
+router.post('/:submissionId/retry-ai', authenticateToken, retryAiAnalysis);
 
 export default router;

@@ -187,6 +187,12 @@ export async function getEvaluationReport(req: Request, res: Response): Promise<
 export async function retryAiAnalysis(req: Request, res: Response): Promise<void> {
   const { submissionId } = req.params;
 
+  // 1. Authentication check
+  if (!req.user) {
+    res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication token required'));
+    return;
+  }
+
   try {
     const submission = await SubmissionModel.findById(submissionId);
     if (!submission) {
@@ -194,6 +200,18 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
       return;
     }
 
+    // 2. Ownership & Authorization check: Only submission owner or ADMIN can retry
+    const isOwner = req.user.id === submission.userId;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      res.status(403).json(
+        createErrorResponse('FORBIDDEN', 'You are not authorized to retry AI analysis for this submission')
+      );
+      return;
+    }
+
+    // 3. State validation: deterministic verdict must exist and not be CE
     if (submission.verdict === 'PENDING') {
       res.status(400).json(
         createErrorResponse(
@@ -214,6 +232,37 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
       return;
     }
 
+    // 4. Deduplication & Conflict check: Reject if already pending or processing
+    if (submission.aiStatus === 'PENDING') {
+      res.status(409).json(
+        createErrorResponse(
+          'CONFLICT',
+          'AI analysis is already pending or in progress for this submission'
+        )
+      );
+      return;
+    }
+
+    const jobId = `ai-analysis-${submissionId}`;
+
+    // Check BullMQ for active/waiting duplicate job and clean up retained completed/failed job
+    try {
+      const existingJob = await aiAnalysisQueue.getJob(jobId);
+      if (existingJob) {
+        const state = await existingJob.getState();
+        if (state === 'active' || state === 'waiting' || state === 'delayed') {
+          res.status(409).json(
+            createErrorResponse('CONFLICT', 'AI analysis job is currently active or queued')
+          );
+          return;
+        }
+        // Remove retained job so BullMQ accepts adding the job with the same deterministic jobId
+        await existingJob.remove();
+      }
+    } catch (qErr: any) {
+      console.warn('[SubmissionController] BullMQ job lookup warning:', qErr.message);
+    }
+
     // Mark AI status as PENDING
     await SubmissionModel.findByIdAndUpdate(submissionId, {
       aiStatus: 'PENDING',
@@ -225,7 +274,7 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
       { $set: { 'aiAnalysis.status': 'PENDING' } }
     );
 
-    // Enqueue to aiAnalysisQueue
+    // Enqueue to aiAnalysisQueue with deterministic jobId
     await aiAnalysisQueue.add(
       'analyze-submission-ai',
       {
@@ -244,6 +293,7 @@ export async function retryAiAnalysis(req: Request, res: Response): Promise<void
         isTestRun: submission.isTestRun
       },
       {
+        jobId,
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },
         removeOnComplete: 100,
