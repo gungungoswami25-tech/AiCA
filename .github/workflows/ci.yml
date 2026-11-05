@@ -1,0 +1,47 @@
+name: CI/CD Quality & Security Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-test:
+    name: Lint, Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm Package Manager
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.14.0
+          run_install: false
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Monorepo Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Approve Native Workspace Builds
+        run: pnpm approve-builds --all || true
+
+      - name: Verify Full Monorepo Build (Turbo)
+        run: pnpm build
+
+      - name: Execute Vitest Test Suite
+        run: pnpm test

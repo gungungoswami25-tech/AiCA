@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { ProblemModel } from '../models/mongodb/problem.model.js';
 import {
   createSuccessResponse,
@@ -7,7 +8,22 @@ import {
   ProblemListItem
 } from '@aica/shared';
 
+function checkMongoReady(res: Response): boolean {
+  if (mongoose.connection.readyState !== 1) {
+    res.status(503).json(
+      createErrorResponse(
+        'SERVICE_UNAVAILABLE',
+        'Database connection to MongoDB is unavailable. Please verify MONGODB_URI in your environment settings.'
+      )
+    );
+    return false;
+  }
+  return true;
+}
+
 export async function getProblems(req: Request, res: Response): Promise<void> {
+  if (!checkMongoReady(res)) return;
+
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
@@ -63,11 +79,13 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
     );
   } catch (err: any) {
     console.error('[ProblemController] getProblems error:', err.message);
-    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problems'));
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problems', [{ issue: err.message }]));
   }
 }
 
 export async function getProblemById(req: Request, res: Response): Promise<void> {
+  if (!checkMongoReady(res)) return;
+
   const { id } = req.params;
 
   try {
@@ -106,11 +124,13 @@ export async function getProblemById(req: Request, res: Response): Promise<void>
     res.status(200).json(createSuccessResponse(sanitizedProblem));
   } catch (err: any) {
     console.error('[ProblemController] getProblemById error:', err.message);
-    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problem'));
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problem', [{ issue: err.message }]));
   }
 }
 
 export async function createProblem(req: Request, res: Response): Promise<void> {
+  if (!checkMongoReady(res)) return;
+
   const parseResult = ProblemCreateSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(422).json(
@@ -133,6 +153,6 @@ export async function createProblem(req: Request, res: Response): Promise<void> 
     res.status(201).json(createSuccessResponse(newProblem, 'Problem created successfully'));
   } catch (err: any) {
     console.error('[ProblemController] createProblem error:', err.message);
-    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create problem'));
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create problem', [{ issue: err.message }]));
   }
 }

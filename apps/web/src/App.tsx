@@ -1,13 +1,15 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Navbar } from './components/Navbar';
+import { HeroLandingPage } from './pages/HeroLandingPage';
 import { ProblemListPage } from './pages/ProblemListPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { Sparkles, ArrowRight, ShieldCheck, Cpu, ArrowLeftRight } from 'lucide-react';
+import { AlgorithmsPage } from './pages/AlgorithmsPage';
+import { useAuthStore } from './store/useAuthStore';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1000000000000-dummygoogleclientidforinitialization.apps.googleusercontent.com';
 

@@ -13,7 +13,7 @@ dotenv.config();
 async function main() {
   console.log('[Worker Daemon] Initializing AI Code Evolution Lab Execution Worker...');
 
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/aica_lab';
+  const mongoUri = sanitizeMongoUri(process.env.MONGODB_URI);
   try {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
     console.log('[Worker Daemon] Connected to MongoDB document store.');
@@ -25,6 +25,10 @@ async function main() {
 
   worker.on('ready', () => {
     console.log('[Worker Daemon] BullMQ submission-queue worker is active and awaiting jobs.');
+  });
+
+  worker.on('error', (err) => {
+    console.warn('[Worker Daemon] Worker warning (deferred):', err.message);
   });
 
   worker.on('failed', (job, err) => {

@@ -99,7 +99,14 @@ export async function register(req: Request, res: Response): Promise<void> {
     }
   } catch (err: any) {
     console.error('[AuthController] Register error:', err.message);
-    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to register account'));
+    const isConnErr = err.code === 'ECONNREFUSED' || err.message?.includes('connect') || err.message?.includes('timeout');
+    res.status(isConnErr ? 503 : 500).json(
+      createErrorResponse(
+        isConnErr ? 'SERVICE_UNAVAILABLE' : 'INTERNAL_ERROR',
+        isConnErr ? 'PostgreSQL database connection failed. Please verify DATABASE_URL in environment settings.' : 'Failed to register account',
+        [{ issue: err.message }]
+      )
+    );
   }
 }
 
@@ -157,7 +164,14 @@ export async function login(req: Request, res: Response): Promise<void> {
     );
   } catch (err: any) {
     console.error('[AuthController] Login error:', err.message);
-    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to authenticate user'));
+    const isConnErr = err.code === 'ECONNREFUSED' || err.message?.includes('connect') || err.message?.includes('timeout');
+    res.status(isConnErr ? 503 : 500).json(
+      createErrorResponse(
+        isConnErr ? 'SERVICE_UNAVAILABLE' : 'INTERNAL_ERROR',
+        isConnErr ? 'PostgreSQL database connection failed. Please verify DATABASE_URL in environment settings.' : 'Failed to authenticate user',
+        [{ issue: err.message }]
+      )
+    );
   }
 }
 

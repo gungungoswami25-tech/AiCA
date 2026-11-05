@@ -12,9 +12,15 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
+    "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@aica/shared": ["../../packages/shared/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

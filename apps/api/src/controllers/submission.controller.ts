@@ -17,6 +17,10 @@ export const submissionQueue = new Queue('submission-queue', {
   connection: redisClient
 });
 
+submissionQueue.on('error', (err) => {
+  console.warn('[SubmissionQueue] Redis queue warning:', err.message);
+});
+
 export async function createSubmission(req: Request, res: Response): Promise<void> {
   const parseResult = SubmissionRequestSchema.safeParse(req.body);
   if (!parseResult.success) {

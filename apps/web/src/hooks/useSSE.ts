@@ -25,7 +25,11 @@ export function useSubmissionSSE(submissionId: string | null) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    fetchEventSource(`/api/v1/submissions/${id}/status-stream`, {
+    const apiBase = import.meta.env.VITE_API_URL
+      ? `${import.meta.env.VITE_API_URL.replace(/\/+$/, '')}/api/v1`
+      : '/api/v1';
+
+    fetchEventSource(`${apiBase}/submissions/${id}/status-stream`, {
       method: 'GET',
       headers,
       signal: ctrl.signal,
