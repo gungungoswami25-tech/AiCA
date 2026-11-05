@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Code2, ArrowRight } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,8 +20,8 @@ export function LoginPage() {
 
     try {
       const res = await api.post('/auth/login', { email, password });
-      const { user, accessToken } = res.data.data;
-      setAuth(user, accessToken);
+      const { user, accessToken, profile } = res.data.data;
+      setAuth(user, accessToken, profile);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Invalid email or password');
@@ -31,63 +31,82 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
-      <div className="w-full max-w-md p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30">
-            <Code2 className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Sign In to AICA Lab</h1>
-          <p className="text-xs text-slate-400">
-            Enter your credentials to access your workspace and evaluation reports
-          </p>
+    <div className="flex-1 flex items-center justify-center p-4 min-h-[calc(100vh-120px)]">
+      <div className="w-full max-w-[420px] px-8 sm:px-10 py-10 rounded-2xl bg-[#232936] border border-slate-800/80 shadow-2xl">
+        {/* Brand Logo Header */}
+        <div className="text-center pb-8 pt-2">
+          <h1 className="text-4xl font-extrabold italic tracking-tight text-white font-sans select-none">
+            AiCA
+          </h1>
         </div>
 
+        {/* Error Alert */}
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 text-center">
+          <div className="mb-6 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 text-center">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4 text-xs font-sans">
-          <div>
-            <label className="block text-slate-400 mb-1 font-medium">Email Address</label>
+        {/* Sign In Form */}
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="relative">
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@university.edu"
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition text-sm"
+              placeholder="Email Address"
+              className="w-full bg-transparent border-b border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-100 placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
           </div>
 
-          <div>
-            <label className="block text-slate-400 mb-1 font-medium">Password</label>
+          <div className="relative pt-1">
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition text-sm font-mono"
+              placeholder="Password"
+              className="w-full bg-transparent border-b border-slate-600 focus:border-[#ee495c] pb-2.5 pr-14 text-slate-100 placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
+            <button
+              type="button"
+              className="absolute right-0 bottom-2.5 text-xs text-slate-400 hover:text-slate-200 transition cursor-pointer"
+            >
+              Forgot
+            </button>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 disabled:opacity-50 transition flex items-center justify-center gap-2"
+            className="w-full mt-8 py-3 rounded-md bg-[#ee495c] hover:bg-[#e03a4e] active:scale-[0.99] text-white font-bold text-sm tracking-wider uppercase shadow-md transition disabled:opacity-50 cursor-pointer"
           >
-            {loading ? 'Authenticating...' : 'Sign In'}
-            <ArrowRight className="w-4 h-4" />
+            {loading ? 'LOGGING IN...' : 'LOG IN'}
           </button>
         </form>
 
-        <div className="text-center text-xs text-slate-500 pt-2 border-t border-slate-800/80">
-          Don&apos;t have an account?{' '}
-          <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-semibold">
-            Create an account
+        {/* Divider */}
+        <div className="relative flex items-center justify-center my-6">
+          <div className="w-full border-t border-slate-700/80" />
+          <span className="absolute bg-[#232936] px-3 text-xs text-slate-400 font-normal">
+            or
+          </span>
+        </div>
+
+        {/* Google Authentication Button */}
+        <GoogleSignInButton onError={(msg) => setError(msg)} text="signin_with" />
+
+        {/* Bottom Switcher */}
+        <div className="border-t border-slate-700/80 my-8" />
+
+        <div className="text-center text-xs text-slate-400">
+          Don&apos;t have an account yet?{' '}
+          <Link
+            to="/register"
+            className="text-[#ee495c] hover:text-[#ff6b7e] font-bold uppercase tracking-wide ml-1 transition"
+          >
+            CREATE ONE NOW
           </Link>
         </div>
       </div>

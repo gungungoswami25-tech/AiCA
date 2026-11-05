@@ -4,11 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@aica/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts')
-    }
-  },
+  envDir: '../../',
   server: {
     port: 5173,
     proxy: {

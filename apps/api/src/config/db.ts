@@ -5,6 +5,12 @@ import dotenv from 'dotenv';
 import { POSTGRES_SCHEMA_SQL } from '../models/postgres/schema.js';
 import { sanitizeRedisUrl, sanitizeDatabaseUrl, sanitizeMongoUri } from '@aica/shared';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load root .env first, then local .env if present
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
 // PostgreSQL Connection Pool
