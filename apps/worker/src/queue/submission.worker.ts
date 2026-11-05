@@ -13,10 +13,18 @@ const isRedisTls = redisUrl.startsWith('rediss://');
 const redisOptions = {
   maxRetriesPerRequest: null,
   lazyConnect: true,
+  connectTimeout: 4000,
+  retryStrategy(times: number) {
+    if (times > 3) return null;
+    return Math.min(times * 300, 1000);
+  },
   ...(isRedisTls ? { tls: { rejectUnauthorized: false } } : {})
 };
 
 const redisPublisher = new Redis(redisUrl, redisOptions);
+redisPublisher.on('error', (err) => {
+  console.warn('[SubmissionWorker] Redis publisher warning (deferred):', err.message);
+});
 
 const judge0 = new Judge0Service();
 const aiClient = new GeminiAnalysisClient();
@@ -48,7 +56,18 @@ async function publishProgress(
 export function startSubmissionWorker(): Worker {
   const connection = new Redis(redisUrl, {
     maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    lazyConnect: true,
+    connectTimeout: 4000,
+    retryStrategy(times: number) {
+      if (times > 3) return null;
+      return Math.min(times * 300, 1000);
+    },
     ...(isRedisTls ? { tls: { rejectUnauthorized: false } } : {})
+  });
+
+  connection.on('error', (err) => {
+    console.warn('[SubmissionWorker] Redis connection warning (deferred):', err.message);
   });
 
   redisPublisher.connect().catch(() => {});

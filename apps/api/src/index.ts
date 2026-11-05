@@ -14,7 +14,8 @@ import { createSuccessResponse, createErrorResponse } from '@aica/shared';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
+const HOST = '0.0.0.0';
 
 // Security & Utility Middleware
 app.use(
@@ -79,11 +80,13 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // Start Server
-async function startServer() {
-  await initializeDatabases();
-  app.listen(PORT, () => {
-    console.log(`[AICA API Gateway] Server listening on http://localhost:${PORT}`);
+// 1. Immediately bind to 0.0.0.0:$PORT so Render port scan succeeds instantly
+app.listen(PORT, HOST, () => {
+  console.log(`[AICA API Gateway] Server listening on http://${HOST}:${PORT}`);
+  
+  // 2. Initialize databases in background without blocking server port binding
+  initializeDatabases().catch((err: any) => {
+    console.warn('[AICA API Gateway] Background database initialization deferred:', err.message);
   });
-}
+});
 
-startServer();

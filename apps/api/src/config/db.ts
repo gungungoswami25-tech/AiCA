@@ -39,13 +39,26 @@ const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const isRedisTls = redisUrl.startsWith('rediss://');
 const redisOptions = {
   maxRetriesPerRequest: null,
-  enableReadyCheck: true,
+  enableReadyCheck: false,
   lazyConnect: true,
+  connectTimeout: 4000,
+  retryStrategy(times: number) {
+    if (times > 3) return null; // stop reconnecting after 3 failed tries if offline
+    return Math.min(times * 300, 1000);
+  },
   ...(isRedisTls ? { tls: { rejectUnauthorized: false } } : {})
 };
 
 export const redisClient = new Redis(redisUrl, redisOptions);
 export const redisSubscriber = new Redis(redisUrl, redisOptions);
+
+// Prevent unhandled error event crashes
+redisClient.on('error', (err) => {
+  console.warn('[Redis] Client connection warning (deferred):', err.message);
+});
+redisSubscriber.on('error', (err) => {
+  console.warn('[Redis] Subscriber connection warning (deferred):', err.message);
+});
 
 // Database Initialization Helper
 export async function initializeDatabases(): Promise<void> {
@@ -85,10 +98,16 @@ export async function initializeDatabases(): Promise<void> {
     console.warn('[MongoDB] Warning: Connection deferred or offline:', err.message);
   }
 
-  // 3. Connect to Redis
+  // 3. Connect to Redis safely with timeout
   try {
-    await redisClient.connect();
-    await redisSubscriber.connect();
+    const connectPromise = Promise.all([
+      redisClient.connect(),
+      redisSubscriber.connect()
+    ]);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Redis connection timed out after 4s')), 4000)
+    );
+    await Promise.race([connectPromise, timeoutPromise]);
     console.log('[Redis] Connected successfully to Redis broker.');
   } catch (err: any) {
     console.warn('[Redis] Warning: Redis connection deferred or offline:', err.message);

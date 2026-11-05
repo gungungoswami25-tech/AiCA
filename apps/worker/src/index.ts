@@ -21,6 +21,10 @@ async function main() {
     console.log('[Worker Daemon] BullMQ submission-queue worker is active and awaiting jobs.');
   });
 
+  worker.on('error', (err) => {
+    console.warn('[Worker Daemon] Worker warning (deferred):', err.message);
+  });
+
   worker.on('failed', (job, err) => {
     console.error(`[Worker Daemon] Job ${job?.id} failed:`, err.message);
   });
