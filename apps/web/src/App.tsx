@@ -14,6 +14,7 @@ import { AlgorithmsPage } from './pages/AlgorithmsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CreateProblemPage } from './pages/CreateProblemPage';
 import { AdminProblemReviewPage } from './pages/AdminProblemReviewPage';
+import { AdminProblemManagementPage } from './pages/AdminProblemManagementPage';
 import { useAuthStore } from './store/useAuthStore';
 import { Sparkles, ArrowRight, Cpu, ArrowLeftRight, Menu } from 'lucide-react';
 
@@ -68,6 +69,7 @@ function AppLayout() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/create-problem" element={<CreateProblemPage />} />
               <Route path="/admin/proposals" element={<AdminProblemReviewPage />} />
+              <Route path="/admin/problems" element={<AdminProblemManagementPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
             </Routes>

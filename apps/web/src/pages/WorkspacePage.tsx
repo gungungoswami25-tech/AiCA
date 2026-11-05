@@ -12,9 +12,10 @@ import {
   Clock,
   Code2,
   X,
-  Loader2
+  Loader2,
+  RotateCcw
 } from 'lucide-react';
-import { Problem, EvaluationReport, SolutionComparison, LANGUAGE_CONFIGS } from '@aica/shared';
+import { Problem, EvaluationReport, SolutionComparison, SupportedLanguage, LANGUAGE_CONFIGS } from '@aica/shared';
 import { MonacoWorkspace } from '../components/MonacoWorkspace';
 import { EvaluationReportView } from '../components/EvaluationReportView';
 import { SolutionComparisonView } from '../components/SolutionComparisonView';
@@ -30,6 +31,48 @@ export function WorkspacePage() {
   const [pastSubmissions, setPastSubmissions] = useState<any[]>([]);
   const [loadingPastSubmissions, setLoadingPastSubmissions] = useState(false);
   const [inspectedCode, setInspectedCode] = useState<{ code: string; language: string; verdict: string; date: string } | null>(null);
+  const [loadedCode, setLoadedCode] = useState<{ code: string; language: SupportedLanguage } | null>(null);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [generatingComparison, setGeneratingComparison] = useState(false);
+
+  const toggleCompareSelect = (subId: string) => {
+    setSelectedForCompare((prev) => {
+      if (prev.includes(subId)) {
+        return prev.filter((id) => id !== subId);
+      }
+      if (prev.length >= 2) {
+        return [prev[1], subId];
+      }
+      return [...prev, subId];
+    });
+  };
+
+  const handleGenerateComparison = async (idA?: string, idB?: string) => {
+    const subA = idA || selectedForCompare[0];
+    const subB = idB || selectedForCompare[1];
+    if (!subA || !subB) return;
+    setGeneratingComparison(true);
+    try {
+      const res = await api.post('/comparisons', { submissionIdA: subA, submissionIdB: subB });
+      if (res.data?.data) {
+        setComparison(res.data.data);
+        setActiveLeftTab('compare');
+        setSelectedForCompare([]);
+      }
+    } catch (err: any) {
+      alert(`Comparison failed: ${err.response?.data?.error?.message || err.message}`);
+    } finally {
+      setGeneratingComparison(false);
+    }
+  };
+
+  const handleLoadIntoEditor = (submission: { code: string; language: string }) => {
+    if (!problem?.id) return;
+    const lang = (submission.language || 'python') as SupportedLanguage;
+    localStorage.setItem(`draft_${problem.id}_${lang}`, submission.code);
+    setLoadedCode({ code: submission.code, language: lang });
+    setInspectedCode(null);
+  };
 
   useEffect(() => {
     if (id) {
@@ -76,14 +119,14 @@ export function WorkspacePage() {
 
   const handleCompareClick = async () => {
     if (!problem?.id) return;
+    setActiveLeftTab('compare');
     try {
       const res = await api.get(`/comparisons/problem/${problem.id}`);
       if (res.data?.data) {
         setComparison(res.data.data);
-        setActiveLeftTab('compare');
       }
     } catch {
-      setActiveLeftTab('desc');
+      // Comparison not yet generated for this problem; user can select from submissions
     }
   };
 
@@ -264,12 +307,101 @@ export function WorkspacePage() {
           )}
 
           {activeLeftTab === 'compare' && (
-            <div>
+            <div className="space-y-4">
               {comparison ? (
-                <SolutionComparisonView comparison={comparison} />
+                <>
+                  <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
+                    <span className="text-slate-600 dark:text-slate-400">Viewing comparative solution evolution</span>
+                    {pastSubmissions.length >= 2 && (
+                      <button
+                        onClick={() => setComparison(null)}
+                        className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                      >
+                        Compare Different Submissions
+                      </button>
+                    )}
+                  </div>
+                  <SolutionComparisonView comparison={comparison} />
+                </>
               ) : (
-                <div className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
-                  Select two accepted submissions to perform a side-by-side evolution analysis.
+                <div className="p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                      <ArrowLeftRight className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                        Evolutionary Solution Comparison
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Contrast two different approaches to explore runtime deltas, memory differences, and AI Big-O trade-offs.
+                      </p>
+                    </div>
+                  </div>
+
+                  {pastSubmissions.length >= 2 ? (
+                    <div className="space-y-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        Select Two Submissions to Compare:
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                        <div>
+                          <span className="block text-slate-500 mb-1 font-sans font-semibold">Approach A (Baseline):</span>
+                          <select
+                            value={selectedForCompare[0] || pastSubmissions[pastSubmissions.length - 1]?.id || ''}
+                            onChange={(e) => setSelectedForCompare([e.target.value, selectedForCompare[1] || pastSubmissions[0]?.id])}
+                            className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+                          >
+                            {pastSubmissions.map((s, idx) => (
+                              <option key={s.id} value={s.id}>
+                                #{pastSubmissions.length - idx} &bull; {s.verdict} ({s.language}) - {s.executionTimeMs}ms
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <span className="block text-slate-500 mb-1 font-sans font-semibold">Approach B (Optimized / Variation):</span>
+                          <select
+                            value={selectedForCompare[1] || pastSubmissions[0]?.id || ''}
+                            onChange={(e) => setSelectedForCompare([selectedForCompare[0] || pastSubmissions[pastSubmissions.length - 1]?.id, e.target.value])}
+                            className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
+                          >
+                            {pastSubmissions.map((s, idx) => (
+                              <option key={s.id} value={s.id}>
+                                #{pastSubmissions.length - idx} &bull; {s.verdict} ({s.language}) - {s.executionTimeMs}ms
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          onClick={() => {
+                            const idA = selectedForCompare[0] || pastSubmissions[pastSubmissions.length - 1]?.id;
+                            const idB = selectedForCompare[1] || pastSubmissions[0]?.id;
+                            handleGenerateComparison(idA, idB);
+                          }}
+                          disabled={generatingComparison}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                        >
+                          {generatingComparison ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          Generate AI Comparison & Diff
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-slate-500 space-y-2 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                      <Clock className="w-6 h-6 text-slate-400 mx-auto" />
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        At least two submissions required
+                      </p>
+                      <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                        Submit code with different algorithms (e.g. brute-force vs. two-pointer) to compare time/space trade-offs side by side.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -277,17 +409,39 @@ export function WorkspacePage() {
 
           {activeLeftTab === 'submissions' && (
             <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Your Problem Submissions</h2>
                   <p className="text-xs text-slate-500 mt-0.5">Prior sandbox kernel test runs for this problem</p>
                 </div>
-                <button
-                  onClick={fetchProblemSubmissions}
-                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                >
-                  Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                  {selectedForCompare.length === 2 && (
+                    <button
+                      onClick={() => handleGenerateComparison()}
+                      disabled={generatingComparison}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+                    >
+                      {generatingComparison ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeftRight className="w-3.5 h-3.5" />}
+                      Compare Selected (2)
+                    </button>
+                  )}
+                  {pastSubmissions.length >= 2 && selectedForCompare.length !== 2 && (
+                    <button
+                      onClick={() => handleGenerateComparison(pastSubmissions[pastSubmissions.length - 1].id, pastSubmissions[0].id)}
+                      disabled={generatingComparison}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition cursor-pointer"
+                    >
+                      <ArrowLeftRight className="w-3.5 h-3.5" />
+                      Quick Compare
+                    </button>
+                  )}
+                  <button
+                    onClick={fetchProblemSubmissions}
+                    className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer px-2 py-1"
+                  >
+                    Refresh
+                  </button>
+                </div>
               </div>
 
               {loadingPastSubmissions ? (
@@ -304,10 +458,15 @@ export function WorkspacePage() {
                 <div className="space-y-3">
                   {pastSubmissions.map((sub) => {
                     const isAccepted = sub.verdict === 'ACCEPTED';
+                    const isSelected = selectedForCompare.includes(sub.id);
                     return (
                       <div
                         key={sub.id}
-                        className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs"
+                        className={`p-3.5 rounded-xl border flex items-center justify-between text-xs transition ${
+                          isSelected
+                            ? 'bg-indigo-50/60 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-700'
+                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                        }`}
                       >
                         <div className="flex items-center gap-2.5">
                           {isAccepted ? (
@@ -327,8 +486,8 @@ export function WorkspacePage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                          <div className="text-right font-mono">
+                        <div className="flex items-center gap-2.5">
+                          <div className="text-right font-mono mr-2">
                             <span className="block font-semibold text-slate-800 dark:text-slate-200">
                               {sub.executionTimeMs != null ? `${sub.executionTimeMs}ms` : '--'}
                             </span>
@@ -336,6 +495,16 @@ export function WorkspacePage() {
                               {sub.memoryUsedKb != null ? `${Math.round(sub.memoryUsedKb / 1024)}MB` : '--'}
                             </span>
                           </div>
+                          <button
+                            onClick={() => toggleCompareSelect(sub.id)}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {isSelected ? '✓ Selected' : 'Compare'}
+                          </button>
                           <button
                             onClick={async () => {
                               try {
@@ -352,7 +521,7 @@ export function WorkspacePage() {
                             }}
                             className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 font-semibold text-[11px] transition cursor-pointer"
                           >
-                            Inspect Code
+                            Inspect
                           </button>
                         </div>
                       </div>
@@ -369,6 +538,7 @@ export function WorkspacePage() {
           <MonacoWorkspace
             problem={problem}
             onEvaluationComplete={handleEvaluationComplete}
+            loadedCode={loadedCode}
           />
         </div>
       </div>
@@ -401,12 +571,21 @@ export function WorkspacePage() {
             </div>
             <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
               <span>Submitted: {inspectedCode.date}</span>
-              <button
-                onClick={() => setInspectedCode(null)}
-                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold cursor-pointer hover:bg-indigo-500"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleLoadIntoEditor(inspectedCode)}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Load into Editor
+                </button>
+                <button
+                  onClick={() => setInspectedCode(null)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold cursor-pointer transition"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
