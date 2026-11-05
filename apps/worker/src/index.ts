@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { sanitizeMongoUri } from '@aica/shared';
 import { startSubmissionWorker } from './queue/submission.worker.js';
+import { startAiAnalysisWorker } from './queue/ai-analysis.worker.js';
 import { startProblemGenerationWorker } from './queue/problem-generation.worker.js';
 import { startProblemValidationWorker } from './queue/problem-validation.worker.js';
 import { startAuditReconcilerWorker } from './queue/audit-reconciler.worker.js';
@@ -26,16 +27,18 @@ async function main() {
   }
 
   const worker = startSubmissionWorker();
+  const aiWorker = startAiAnalysisWorker();
   const problemGenWorker = startProblemGenerationWorker();
   const problemValWorker = startProblemValidationWorker();
   const auditWorker = startAuditReconcilerWorker();
 
-  console.log('[Worker Daemon] All BullMQ workers (submissions, problem-generation, differential-validation, audit-reconciler) are active.');
+  console.log('[Worker Daemon] All BullMQ workers (submissions, ai-analysis, problem-generation, differential-validation, audit-reconciler) are active.');
 
   process.on('SIGTERM', async () => {
     console.log('[Worker Daemon] Shutting down gracefully...');
     await Promise.all([
       worker.close(),
+      aiWorker.close(),
       problemGenWorker.close(),
       problemValWorker.close(),
       auditWorker.close()
