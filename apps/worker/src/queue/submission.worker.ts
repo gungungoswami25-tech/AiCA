@@ -7,11 +7,16 @@ import { ScoringService } from '../services/scoring.service.js';
 import { GeminiAnalysisClient } from '@aica/ai-engine';
 import { PipelineStatus, Verdict, SupportedLanguage } from '@aica/shared';
 
-// Initialize Services
-const redisPublisher = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+// Initialize Services with TLS support
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const isRedisTls = redisUrl.startsWith('rediss://');
+const redisOptions = {
   maxRetriesPerRequest: null,
-  lazyConnect: true
-});
+  lazyConnect: true,
+  ...(isRedisTls ? { tls: { rejectUnauthorized: false } } : {})
+};
+
+const redisPublisher = new Redis(redisUrl, redisOptions);
 
 const judge0 = new Judge0Service();
 const aiClient = new GeminiAnalysisClient();
@@ -41,8 +46,9 @@ async function publishProgress(
 }
 
 export function startSubmissionWorker(): Worker {
-  const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-    maxRetriesPerRequest: null
+  const connection = new Redis(redisUrl, {
+    maxRetriesPerRequest: null,
+    ...(isRedisTls ? { tls: { rejectUnauthorized: false } } : {})
   });
 
   redisPublisher.connect().catch(() => {});
