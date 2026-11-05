@@ -17,9 +17,10 @@ import { ThemeToggle } from './ThemeToggle';
 
 interface TopHeaderProps {
   onOpenMobileSidebar?: () => void;
+  showSidebarToggle?: boolean;
 }
 
-export function TopHeader({ onOpenMobileSidebar }: TopHeaderProps) {
+export function TopHeader({ onOpenMobileSidebar, showSidebarToggle = false }: TopHeaderProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -88,15 +89,17 @@ export function TopHeader({ onOpenMobileSidebar }: TopHeaderProps) {
       <div className="h-full px-4 sm:px-6 flex items-center justify-between gap-4">
         {/* Left Section: Mobile Menu Trigger + Brand/Context */}
         <div className="flex items-center gap-3">
-          {/* Mobile Hamburger Trigger */}
-          <button
-            type="button"
-            onClick={onOpenMobileSidebar}
-            aria-label="Open Navigation Drawer"
-            className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden transition cursor-pointer"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          {/* Mobile Hamburger Trigger (shown only when sidebar is available) */}
+          {showSidebarToggle && (
+            <button
+              type="button"
+              onClick={onOpenMobileSidebar}
+              aria-label="Open Navigation Drawer"
+              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden transition cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Logo & Context Title */}
           <Link to="/" className="flex items-center gap-2.5 group">
@@ -113,13 +116,45 @@ export function TopHeader({ onOpenMobileSidebar }: TopHeaderProps) {
             </div>
           </Link>
 
-          {/* Breadcrumb Separator on desktop */}
-          <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500">
-            <span>/</span>
-            <span className="text-slate-600 dark:text-slate-300 font-medium">
-              {getPageTitle()}
-            </span>
-          </div>
+          {/* Authenticated breadcrumb */}
+          {isAuthenticated && (
+            <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500">
+              <span>/</span>
+              <span className="text-slate-600 dark:text-slate-300 font-medium">
+                {getPageTitle()}
+              </span>
+            </div>
+          )}
+
+          {/* Guest Landing Navigation Links */}
+          {!isAuthenticated && location.pathname === '/' && (
+            <nav className="hidden md:flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 font-medium ml-3">
+              <a
+                href="#live-diff"
+                className="px-2.5 py-1.5 rounded-lg hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800 transition"
+              >
+                Live Diff
+              </a>
+              <a
+                href="#pipeline"
+                className="px-2.5 py-1.5 rounded-lg hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800 transition"
+              >
+                Pipeline
+              </a>
+              <a
+                href="#features"
+                className="px-2.5 py-1.5 rounded-lg hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800 transition"
+              >
+                Features
+              </a>
+              <a
+                href="#methodology"
+                className="px-2.5 py-1.5 rounded-lg hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800 transition"
+              >
+                Pedagogy
+              </a>
+            </nav>
+          )}
         </div>
 
         {/* Right Section: Theme Toggle + Profile / Logout Dropdown */}
