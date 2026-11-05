@@ -26,61 +26,9 @@ export function WorkspacePage() {
     try {
       const res = await api.get(`/problems/${problemId}`);
       setProblem(res.data.data);
-    } catch {
-      // Fallback default problem if backend DB is not yet running
-      setProblem({
-        id: problemId,
-        title: 'Two Sum Optimal',
-        slug: 'two-sum-optimal',
-        status: 'PUBLISHED',
-        version: 1,
-        difficulty: 'EASY',
-        tags: ['Arrays', 'Hash-Table'],
-        description: `Given an array of integers \`nums\` and an integer \`target\`, return *indices of the two numbers such that they add up to \`target\`*.\n\nYou may assume that each input would have ***exactly one solution***, and you may not use the same element twice.`,
-        constraints: [
-          '2 <= nums.length <= 10^4',
-          '-10^9 <= nums[i] <= 10^9',
-          '-10^9 <= target <= 10^9',
-          'Only one valid answer exists.'
-        ],
-        examples: [
-          {
-            input: 'nums = [2,7,11,15], target = 9',
-            output: '[0,1]',
-            explanation: 'Because nums[0] + nums[1] == 9, we return [0, 1].'
-          }
-        ],
-        timeLimitMs: 2000,
-        memoryLimitKb: 262144,
-        benchmarks: {
-          targetTimeMs: 15,
-          pythonMultiplier: 4.0,
-          jsMultiplier: 2.5,
-          cppMultiplier: 1.0,
-          javaMultiplier: 2.0
-        },
-        starterCode: {
-          python: `def twoSum(nums: list[int], target: int) -> list[int]:\n    # Implement O(N) hash map solution here\n    lookup = {}\n    for i, num in enumerate(nums):\n        diff = target - num\n        if diff in lookup:\n            return [lookup[diff], i]\n        lookup[num] = i\n    return []\n`,
-          javascript: `function twoSum(nums, target) {\n    const lookup = new Map();\n    for (let i = 0; i < nums.length; i++) {\n        const diff = target - nums[i];\n        if (lookup.has(diff)) return [lookup.get(diff), i];\n        lookup.set(nums[i], i);\n    }\n    return [];\n}\n`,
-          cpp: `#include <vector>\n#include <unordered_map>\n\nstd::vector<int> twoSum(std::vector<int>& nums, int target) {\n    std::unordered_map<int, int> lookup;\n    for (int i = 0; i < nums.size(); i++) {\n        int diff = target - nums[i];\n        if (lookup.count(diff)) return {lookup[diff], i};\n        lookup[nums[i]] = i;\n    }\n    return {};\n}\n`,
-          java: `import java.util.*;\n\nclass Solution {\n    public int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> lookup = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int diff = target - nums[i];\n            if (lookup.containsKey(diff)) return new int[]{lookup.get(diff), i};\n            lookup.put(nums[i], i);\n        }\n        return new int[]{};\n    }\n}\n`
-        },
-        testCases: [
-          {
-            id: 'tc-1',
-            input: '4\n2 7 11 15\n9',
-            expectedOutput: '0 1',
-            isPublic: true,
-            isEdgeCase: false,
-            weight: 1.0
-          }
-        ],
-        totalSubmissions: 48,
-        acceptedSubmissions: 36,
-        createdBy: 'system',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+    } catch (err: any) {
+      console.warn('[WorkspacePage] Problem fetch failed:', err.message);
+      setProblem(null);
     } finally {
       setLoading(false);
     }
@@ -91,104 +39,43 @@ export function WorkspacePage() {
       const res = await api.get(`/submissions/${submissionId}/report`);
       setReport(res.data.data);
       setActiveLeftTab('report');
-    } catch {
-      // Fallback synthetic report for preview
-      setReport({
-        id: reportId,
-        submissionId,
-        userId: 'student-1',
-        username: 'algo_learner',
-        problemId: problem?.id || 'two-sum',
-        verdict: 'ACCEPTED',
-        pipelineStatus: 'COMPLETED',
-        summary: 'All 5 test cases passed with optimal execution metrics.',
-        aiAnalysis: {
-          status: 'COMPLETED',
-          mode: 'OPTIMIZATION',
-          codeSummary: 'Single-pass Hash Map approach.',
-          theoreticalComplexity: {
-            timeComplexity: 'O(N)',
-            spaceComplexity: 'O(N)',
-            explanation: 'Single linear iteration with O(1) average hash lookup time.'
-          },
-          codeQuality: {
-            score: 9.0,
-            readabilityAnalysis: 'Clear variable names, idiomatic syntax, and proper boundary safeguards.',
-            codeSmells: [],
-            positivePractices: ['Used dictionary comprehension', 'Early return pattern']
-          },
-          optimizationSuggestions: [
-            {
-              title: 'Memory Overhead Optimization',
-              rationale: 'Pre-allocating hash map capacity reduces dynamic resizing overhead in high-throughput loops.',
-              expectedTimeImpact: '~5-10% speedup',
-              refactoredSnippet: '# Pre-sized dictionary initialization where appropriate'
-            }
-          ]
-        },
-        metrics: {
-          rawTimeMs: 38,
-          normalizedTimeMs: 9.5,
-          rawMemoryKb: 14200,
-          normalizedMemoryKb: 2048,
-          compositeScore: 94.6,
-          percentileTime: 92,
-          percentileMemory: 88
-        },
-        createdAt: new Date().toISOString()
-      });
-      setActiveLeftTab('report');
+    } catch (err: any) {
+      console.warn('[WorkspacePage] Evaluation report deferred or not found:', err.message);
     }
   };
 
-  const handleCompareClick = () => {
-    // Generate synthetic comparison for demo
-    setComparison({
-      id: 'comp-1',
-      problemId: problem?.id || 'two-sum',
-      submissionA: {
-        submissionId: 'sub-brute-force',
-        userId: 'student-1',
-        username: 'Initial Brute Force',
-        language: 'python',
-        code: `def twoSum(nums, target):\n    # O(N^2) Nested Iteration\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n    return []\n`,
-        executionTimeMs: 1850,
-        memoryUsedKb: 13500,
-        timeComplexity: 'O(N^2)',
-        spaceComplexity: 'O(1)',
-        qualityScore: 5.5,
-        compositeScore: 48.2,
-        createdAt: new Date(Date.now() - 3600000).toISOString()
-      },
-      submissionB: {
-        submissionId: 'sub-hash-map',
-        userId: 'student-1',
-        username: 'Optimal Hash Map',
-        language: 'python',
-        code: `def twoSum(nums, target):\n    # O(N) Hash Table Lookup\n    lookup = {}\n    for i, num in enumerate(nums):\n        diff = target - num\n        if diff in lookup:\n            return [lookup[diff], i]\n        lookup[num] = i\n    return []\n`,
-        executionTimeMs: 38,
-        memoryUsedKb: 14200,
-        timeComplexity: 'O(N)',
-        spaceComplexity: 'O(N)',
-        qualityScore: 9.0,
-        compositeScore: 94.6,
-        createdAt: new Date().toISOString()
-      },
-      deltaAnalysis: {
-        executionTimeDiffMs: -1812,
-        memoryDiffKb: 700,
-        qualityScoreDiff: 3.5,
-        timeComplexityComparison: 'Reduced quadratic O(N^2) search to linear O(N) single-pass lookup.',
-        spaceComplexityComparison: 'Traded O(N) auxiliary RAM for an exponential speedup.',
-        tradeOffSummary: 'Approach B transforms an asymptotic bottleneck into an optimal O(N) lookup using a Hash Map, achieving a 48x execution speedup.'
-      },
-      createdAt: new Date().toISOString()
-    });
-    setActiveLeftTab('compare');
+  const handleCompareClick = async () => {
+    if (!problem?.id) return;
+    try {
+      const res = await api.get(`/comparisons/problem/${problem.id}`);
+      if (res.data?.data) {
+        setComparison(res.data.data);
+        setActiveLeftTab('compare');
+      }
+    } catch {
+      setActiveLeftTab('desc');
+    }
   };
 
-  if (loading || !problem) {
+  if (loading) {
     return <div className="p-12 text-center text-slate-500 font-mono">Loading coding workspace...</div>;
+  }
+
+  if (!problem) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Problem Not Found</h2>
+        <p className="text-sm text-slate-500 max-w-md">
+          The requested problem challenge does not exist or has not yet been published to the catalog.
+        </p>
+        <Link
+          to="/problems"
+          className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition"
+        >
+          Return to Problem Catalog
+        </Link>
+      </div>
+    );
   }
 
   return (
