@@ -10,6 +10,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AlgorithmsPage } from './pages/AlgorithmsPage';
 import { useAuthStore } from './store/useAuthStore';
+import { Sparkles, ArrowRight, Cpu, ArrowLeftRight } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1000000000000-dummygoogleclientidforinitialization.apps.googleusercontent.com';
 
