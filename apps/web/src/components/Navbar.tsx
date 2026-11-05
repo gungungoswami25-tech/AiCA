@@ -35,7 +35,7 @@ export function Navbar() {
 
         <nav className="flex items-center gap-1 sm:gap-3 text-sm font-medium">
           {isAuthenticated ? (
-            <>
+            <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
               <Link
                 to="/problems"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
@@ -89,7 +89,7 @@ export function Navbar() {
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <>
               {/* Landing Page Quick Navigation Anchors for Guest Visitors */}

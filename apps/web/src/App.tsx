@@ -11,6 +11,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { AlgorithmsPage } from './pages/AlgorithmsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { useAuthStore } from './store/useAuthStore';
+import { Sparkles, ArrowRight, Cpu, ArrowLeftRight } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
