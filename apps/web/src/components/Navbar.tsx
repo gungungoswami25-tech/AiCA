@@ -65,21 +65,25 @@ export function Navbar() {
                 Dashboard
               </Link>
               <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
-                <span className="text-xs text-slate-700 font-medium flex items-center gap-1.5 font-mono bg-slate-100 px-2.5 py-1 rounded-lg">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-1.5 text-xs text-slate-700 font-medium font-mono bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-200/60 hover:border-slate-300 transition group"
+                  title="View Your Developer Profile"
+                >
                   {profile?.avatarUrl ? (
                     <img
                       src={profile.avatarUrl}
                       alt={user?.username}
-                      className="w-5 h-5 rounded-full object-cover border border-emerald-500/30"
+                      className="w-5 h-5 rounded-full object-cover border border-emerald-500/40 group-hover:scale-105 transition-transform"
                     />
                   ) : (
-                    <UserIcon className="w-3.5 h-3.5 text-indigo-600" />
+                    <UserIcon className="w-3.5 h-3.5 text-indigo-600 group-hover:text-indigo-800 transition" />
                   )}
-                  {user?.username}
-                </span>
+                  <span className="group-hover:text-slate-900 transition">{user?.username}</span>
+                </Link>
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />

@@ -435,3 +435,51 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function updateProfile(req: Request, res: Response): Promise<void> {
+  if (!req.user || !req.user.id) {
+    res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Not authenticated'));
+    return;
+  }
+
+  const { fullName, githubHandle, bio, avatarUrl } = req.body;
+
+  // Sanitize strings
+  const cleanFullName = typeof fullName === 'string' ? fullName.trim().slice(0, 100) : undefined;
+  const cleanGithub = typeof githubHandle === 'string' ? githubHandle.trim().slice(0, 100) : undefined;
+  const cleanBio = typeof bio === 'string' ? bio.trim().slice(0, 500) : undefined;
+  const cleanAvatar = typeof avatarUrl === 'string' ? avatarUrl.trim().slice(0, 512) : undefined;
+
+  try {
+    const updateRes = await pgPool.query(
+      `INSERT INTO user_profiles (user_id, full_name, github_handle, bio, avatar_url, last_active_at)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET
+         full_name = COALESCE($2, user_profiles.full_name),
+         github_handle = COALESCE($3, user_profiles.github_handle),
+         bio = COALESCE($4, user_profiles.bio),
+         avatar_url = COALESCE($5, user_profiles.avatar_url),
+         last_active_at = CURRENT_TIMESTAMP
+       RETURNING user_id, full_name, github_handle, bio, avatar_url, total_submissions, problems_solved, current_streak, last_active_at`,
+      [req.user.id, cleanFullName ?? null, cleanGithub ?? null, cleanBio ?? null, cleanAvatar ?? null]
+    );
+
+    const row = updateRes.rows[0];
+    const profile: UserProfile = {
+      userId: row.user_id,
+      fullName: row.full_name,
+      githubHandle: row.github_handle,
+      bio: row.bio,
+      avatarUrl: row.avatar_url,
+      totalSubmissions: row.total_submissions || 0,
+      problemsSolved: row.problems_solved || 0,
+      currentStreak: row.current_streak || 0,
+      lastActiveAt: row.last_active_at
+    };
+
+    res.status(200).json(createSuccessResponse({ profile }, 'Profile updated successfully'));
+  } catch (err: any) {
+    console.error('[AuthController] Failed to update user profile:', err);
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to update user profile'));
+  }
+}
+

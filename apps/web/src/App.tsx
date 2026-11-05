@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AlgorithmsPage } from './pages/AlgorithmsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { useAuthStore } from './store/useAuthStore';
 
 const GOOGLE_CLIENT_ID =
@@ -39,6 +40,7 @@ export default function App() {
               <Route path="/workspace/:id" element={<WorkspacePage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
             </Routes>
