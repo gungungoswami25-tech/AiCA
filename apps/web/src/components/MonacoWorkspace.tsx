@@ -19,6 +19,7 @@ import {
 } from '@aica/shared';
 import { api } from '../services/api';
 import { useSubmissionSSE } from '../hooks/useSSE';
+import { useThemeStore } from '../store/useThemeStore';
 
 interface MonacoWorkspaceProps {
   problem: Problem;
@@ -26,6 +27,7 @@ interface MonacoWorkspaceProps {
 }
 
 export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspaceProps) {
+  const { isDark } = useThemeStore();
   const [language, setLanguage] = useState<SupportedLanguage>('python');
   const [code, setCode] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'tests' | 'console'>('tests');
@@ -112,14 +114,14 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
   const publicTestCases = problem.testCases || [];
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl transition-colors duration-200">
       {/* Editor Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-950/80 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 transition-colors">
         <div className="flex items-center gap-3">
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
-            className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500 font-mono"
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500 font-mono shadow-2xs"
           >
             <option value="python">Python (3.10)</option>
             <option value="javascript">JavaScript (Node 18)</option>
@@ -129,7 +131,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
 
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition"
             title="Reset to boilerplate"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -141,9 +143,9 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
           <button
             onClick={() => handleSubmit(true)}
             disabled={isSubmitting || isStreaming}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold disabled:opacity-50 transition"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold disabled:opacity-50 transition"
           >
-            <Play className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+            <Play className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
             Run Code
           </button>
           <button
@@ -159,17 +161,17 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
 
       {/* Real-time SSE Progress Ribbon */}
       {(isSubmitting || isStreaming || currentEvent) && (
-        <div className="bg-indigo-950/40 border-b border-indigo-500/20 px-4 py-2 flex items-center justify-between text-xs font-mono">
+        <div className="bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-500/20 px-4 py-2 flex items-center justify-between text-xs font-mono">
           <div className="flex items-center gap-3">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
             </span>
-            <span className="text-indigo-300 font-semibold">
+            <span className="text-indigo-700 dark:text-indigo-300 font-semibold">
               Stage: {currentEvent?.pipelineStatus || 'QUEUED'}
             </span>
             {currentEvent?.verdict && currentEvent.verdict !== 'PENDING' && (
-              <span className="text-slate-400">Verdict: {currentEvent.verdict}</span>
+              <span className="text-slate-600 dark:text-slate-400">Verdict: {currentEvent.verdict}</span>
             )}
           </div>
           <span className="text-slate-500">
@@ -183,7 +185,7 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
         <Editor
           height="100%"
           language={LANGUAGE_CONFIGS[language].monacoLanguage}
-          theme="vs-dark"
+          theme={isDark ? "vs-dark" : "light"}
           value={code}
           onChange={handleCodeChange}
           options={{
@@ -198,14 +200,14 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
       </div>
 
       {/* Bottom Test Case & Console Panel */}
-      <div className="h-48 border-t border-slate-800 bg-slate-950 flex flex-col">
-        <div className="flex items-center gap-4 px-4 py-2 border-b border-slate-800 bg-slate-900/50 text-xs font-medium">
+      <div className="h-48 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
+        <div className="flex items-center gap-4 px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-xs font-medium">
           <button
             onClick={() => setActiveTab('tests')}
             className={`flex items-center gap-1.5 pb-1 ${
               activeTab === 'tests'
-                ? 'text-indigo-400 border-b-2 border-indigo-500 font-semibold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 font-semibold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -215,8 +217,8 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
             onClick={() => setActiveTab('console')}
             className={`flex items-center gap-1.5 pb-1 ${
               activeTab === 'console'
-                ? 'text-indigo-400 border-b-2 border-indigo-500 font-semibold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 font-semibold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
@@ -234,8 +236,8 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
                     onClick={() => setActiveTestIndex(idx)}
                     className={`px-3 py-1 rounded-md text-xs font-semibold ${
                       activeTestIndex === idx
-                        ? 'bg-slate-800 text-indigo-400 border border-slate-700'
-                        : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                        ? 'bg-slate-200 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-300 dark:border-slate-700'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-transparent'
                     }`}
                   >
                     Case {idx + 1}
@@ -245,13 +247,13 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
 
               {publicTestCases[activeTestIndex] && (
                 <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block mb-1 font-sans text-xs">Standard Input (stdin):</span>
-                    <pre className="text-slate-200 whitespace-pre-wrap">{publicTestCases[activeTestIndex].input}</pre>
+                  <div className="bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400 block mb-1 font-sans text-xs">Standard Input (stdin):</span>
+                    <pre className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{publicTestCases[activeTestIndex].input}</pre>
                   </div>
-                  <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block mb-1 font-sans text-xs">Expected Output:</span>
-                    <pre className="text-emerald-400 whitespace-pre-wrap">{publicTestCases[activeTestIndex].expectedOutput}</pre>
+                  <div className="bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400 block mb-1 font-sans text-xs">Expected Output:</span>
+                    <pre className="text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap">{publicTestCases[activeTestIndex].expectedOutput}</pre>
                   </div>
                 </div>
               )}
@@ -259,9 +261,9 @@ export function MonacoWorkspace({ problem, onEvaluationComplete }: MonacoWorkspa
           ) : (
             <div>
               {consoleOutput ? (
-                <pre className="text-slate-200 whitespace-pre-wrap leading-relaxed">{consoleOutput}</pre>
+                <pre className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">{consoleOutput}</pre>
               ) : (
-                <div className="text-slate-500 italic py-4 text-center">
+                <div className="text-slate-400 dark:text-slate-500 italic py-4 text-center font-sans">
                   Click &quot;Run Code&quot; or &quot;Submit Solution&quot; to inspect isolated Judge0 stdout, stderr, and execution telemetry.
                 </div>
               )}

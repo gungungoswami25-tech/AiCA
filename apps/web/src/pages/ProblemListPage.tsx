@@ -62,11 +62,11 @@ export function ProblemListPage() {
   const getDifficultyBadge = (diff: ProblemDifficulty) => {
     switch (diff) {
       case 'EASY':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Easy</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Easy</span>;
       case 'MEDIUM':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Medium</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Medium</span>;
       case 'HARD':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Hard</span>;
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">Hard</span>;
     }
   };
 
@@ -79,11 +79,11 @@ export function ProblemListPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-100 flex items-center gap-3">
-            <BookOpen className="w-8 h-8 text-indigo-400" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <BookOpen className="w-8 h-8 text-indigo-500 dark:text-indigo-400" />
             Problem Catalog
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Solve algorithmic problems with multi-language runtimes, isolated Judge0 sandboxes, and AI complexity evaluation.
           </p>
         </div>
@@ -97,7 +97,7 @@ export function ProblemListPage() {
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
                 difficulty === d
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shadow-xs'
               }`}
             >
               {d}
@@ -108,32 +108,32 @@ export function ProblemListPage() {
 
       {/* Search Input */}
       <div className="relative">
-        <Search className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
+        <Search className="w-5 h-5 text-slate-400 dark:text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           placeholder="Search problems by title or algorithm tag..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+          className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 shadow-xs transition"
         />
       </div>
 
       {/* Problem Cards List */}
       <div className="space-y-3">
         {loading ? (
-          <div className="p-12 text-center text-slate-500 font-mono">Loading problem repository...</div>
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-mono">Loading problem repository...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">No problems found matching your criteria.</div>
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400">No problems found matching your criteria.</div>
         ) : (
           filtered.map((prob) => (
             <Link
               key={prob.id}
               to={`/workspace/${prob.id}`}
-              className="group p-5 rounded-2xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 flex items-center justify-between transition shadow-md"
+              className="group p-5 rounded-2xl bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 flex items-center justify-between transition shadow-xs"
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-base text-slate-200 group-hover:text-indigo-400 transition">
+                  <span className="font-bold text-base text-slate-900 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
                     {prob.title}
                   </span>
                   {getDifficultyBadge(prob.difficulty)}
@@ -143,19 +143,19 @@ export function ProblemListPage() {
                   {prob.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700/60"
+                      className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60"
                     >
                       <Tag className="w-2.5 h-2.5" />
                       {tag}
                     </span>
                   ))}
-                  <span className="text-xs text-slate-500 ml-2 font-mono">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 font-mono">
                     Acceptance: {prob.acceptanceRate}% ({prob.totalSubmissions} submissions)
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-400 group-hover:translate-x-1 transition">
+              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition">
                 Solve Problem
                 <ArrowRight className="w-4 h-4" />
               </div>
