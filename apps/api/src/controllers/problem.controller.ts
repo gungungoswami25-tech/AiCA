@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { ProblemModel } from '../models/mongodb/problem.model.js';
+import { SubmissionModel } from '../models/mongodb/submission.model.js';
 import {
   createSuccessResponse,
   createErrorResponse,
@@ -82,18 +83,49 @@ export async function getProblems(req: Request, res: Response): Promise<void> {
       ProblemModel.countDocuments(filter)
     ]);
 
-    const formattedList: ProblemListItem[] = problems.map((p: any) => ({
-      id: p._id.toString(),
-      title: p.title,
-      slug: p.slug,
-      difficulty: p.difficulty,
-      tags: p.tags || [],
-      totalSubmissions: p.totalSubmissions || 0,
-      acceptanceRate:
-        p.totalSubmissions > 0
-          ? Math.round((p.acceptedSubmissions / p.totalSubmissions) * 1000) / 10
-          : 0
-    }));
+    const userId = req.user?.id;
+    const userProblemStatusMap = new Map<string, 'SOLVED' | 'ATTEMPTED' | 'TODO'>();
+
+    if (userId && problems.length > 0) {
+      const problemIds = problems.map((p: any) => p._id.toString());
+      try {
+        const userSubs = await SubmissionModel.find({
+          userId,
+          problemId: { $in: problemIds },
+          isTestRun: false
+        })
+          .select('problemId verdict')
+          .lean();
+
+        for (const sub of userSubs) {
+          const pId = sub.problemId;
+          if (sub.verdict === 'ACCEPTED') {
+            userProblemStatusMap.set(pId, 'SOLVED');
+          } else if (!userProblemStatusMap.has(pId) || userProblemStatusMap.get(pId) !== 'SOLVED') {
+            userProblemStatusMap.set(pId, 'ATTEMPTED');
+          }
+        }
+      } catch (subErr: any) {
+        console.warn('[ProblemController] Failed to annotate user problem status:', subErr.message);
+      }
+    }
+
+    const formattedList: ProblemListItem[] = problems.map((p: any) => {
+      const pId = p._id.toString();
+      return {
+        id: pId,
+        title: p.title,
+        slug: p.slug,
+        difficulty: p.difficulty,
+        tags: p.tags || [],
+        totalSubmissions: p.totalSubmissions || 0,
+        acceptanceRate:
+          p.totalSubmissions > 0
+            ? Math.round((p.acceptedSubmissions / p.totalSubmissions) * 1000) / 10
+            : 0,
+        userStatus: userId ? (userProblemStatusMap.get(pId) || 'TODO') : undefined
+      };
+    });
 
     res.status(200).json(
       createSuccessResponse({

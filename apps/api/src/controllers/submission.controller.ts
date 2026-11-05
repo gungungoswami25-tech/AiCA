@@ -47,10 +47,11 @@ export async function createSubmission(req: Request, res: Response): Promise<voi
   const username = req.user?.username || 'Guest';
 
   try {
-    // 1. Verify problem exists
+    // 1. Verify problem exists and is accessible
     const problem = await ProblemModel.findById(problemId);
-    if (!problem) {
-      res.status(404).json(createErrorResponse('NOT_FOUND', 'Target problem not found'));
+    const isStaff = req.user?.role === 'ADMIN' || req.user?.role === 'INSTRUCTOR';
+    if (!problem || (problem.status && problem.status !== 'PUBLISHED' && !isStaff)) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'Target problem not found or unpublished'));
       return;
     }
 

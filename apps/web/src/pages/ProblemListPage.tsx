@@ -12,7 +12,9 @@ import {
   ArrowUpDown,
   RotateCcw,
   AlertCircle,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 import { ProblemListItem, ProblemDifficulty, ProblemSortOption } from '@aica/shared';
 import { api } from '../services/api';
@@ -287,6 +289,18 @@ export function ProblemListPage() {
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
+                  {prob.userStatus === 'SOLVED' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                      Solved
+                    </span>
+                  )}
+                  {prob.userStatus === 'ATTEMPTED' && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800">
+                      <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                      Attempted
+                    </span>
+                  )}
                   <span className="font-bold text-base text-slate-900 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
                     {prob.title}
                   </span>

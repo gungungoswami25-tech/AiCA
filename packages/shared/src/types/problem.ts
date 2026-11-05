@@ -75,6 +75,7 @@ export interface ProblemListItem {
   tags: string[];
   acceptanceRate: number;
   totalSubmissions: number;
+  userStatus?: 'SOLVED' | 'ATTEMPTED' | 'TODO';
 }
 
 export interface ProblemProposalClarification {
