@@ -17,6 +17,7 @@ import { SubmissionModel } from '../apps/api/src/models/mongodb/submission.model
 import { SolutionComparisonModel } from '../apps/api/src/models/mongodb/comparison.model.js';
 import { ProblemModel } from '../apps/api/src/models/mongodb/problem.model.js';
 import { EvaluationReportModel } from '../apps/api/src/models/mongodb/evaluation-report.model.js';
+import { GeminiAnalysisClient } from '../packages/ai-engine/dist/index.js';
 import { pgPool } from '../apps/api/src/config/db.js';
 
 function mockReqRes(options: {
@@ -154,6 +155,9 @@ describe('Phase 4: Evolutionary Solution Comparison, Global Leaderboards & Platf
 
       vi.spyOn(ProblemModel, 'findById').mockReturnValue({ lean: () => Promise.resolve({ _id: 'prob_1', title: 'Two Sum' }) } as any);
       vi.spyOn(EvaluationReportModel, 'findOne').mockReturnValue({ lean: () => Promise.resolve(null) } as any);
+      vi.spyOn(GeminiAnalysisClient.prototype, 'analyzeComparison').mockRejectedValueOnce(
+        new Error('AI_CONFIG_ERROR: Google Gemini API key is missing. Set GEMINI_API_KEY in environment variables.')
+      );
 
       let createdDoc: any = null;
       vi.spyOn(SolutionComparisonModel, 'create').mockImplementation((doc: any) => {

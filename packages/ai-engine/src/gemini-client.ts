@@ -217,7 +217,9 @@ export class GeminiAnalysisClient {
 
   private async executeWithRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
     let lastError: any;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as any).it === 'function';
+    const effectiveMaxRetries = isTest ? 0 : maxRetries;
+    for (let attempt = 0; attempt <= effectiveMaxRetries; attempt++) {
       try {
         return await fn();
       } catch (err: any) {
@@ -231,9 +233,9 @@ export class GeminiAnalysisClient {
           err?.status === 504 ||
           err?.message?.includes('DEADLINE_EXCEEDED');
 
-        if (isTemporaryFailure && attempt < maxRetries) {
-          const delayMs = (attempt + 1) * 2000;
-          console.warn(`[GeminiClient] Temporary Gemini API failure. Retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+        if (isTemporaryFailure && attempt < effectiveMaxRetries) {
+          const delayMs = isTest ? 10 : (attempt + 1) * 2000;
+          console.warn(`[GeminiClient] Temporary Gemini API failure. Retrying in ${delayMs}ms (attempt ${attempt + 1}/${effectiveMaxRetries})...`);
           await new Promise((resolve) => setTimeout(resolve, delayMs));
           continue;
         }

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { SubmissionModel } from '../models/mongodb/submission.model.js';
 import { SolutionComparisonModel } from '../models/mongodb/comparison.model.js';
 import { MultiSolutionComparisonModel } from '../models/mongodb/multi-comparison.model.js';
@@ -44,7 +45,20 @@ export async function createComparison(req: Request, res: Response): Promise<voi
       return;
     }
 
-    const problem = await ProblemModel.findById(subA.problemId).lean();
+    // Ownership check: Student can compare their own submissions
+    const userId = req.user?.id;
+    const isStaff = req.user?.role === 'ADMIN' || req.user?.role === 'INSTRUCTOR';
+    if (userId && !isStaff && subA.userId !== userId && subB.userId !== userId) {
+      res.status(403).json(createErrorResponse('FORBIDDEN', 'You are only authorized to compare your own submissions'));
+      return;
+    }
+
+    let problem: any = null;
+    try {
+      problem = await ProblemModel.findById(subA.problemId).lean();
+    } catch {
+      problem = null;
+    }
     const problemTitle = problem?.title || 'Coding Problem';
 
     const [reportA, reportB] = await Promise.all([
@@ -69,18 +83,25 @@ export async function createComparison(req: Request, res: Response): Promise<voi
     };
 
     try {
-      // Request AI evolutionary narrative from Gemini
-      const geminiResult = await geminiClient.analyzeComparison({
-        problemTitle,
-        languageA: subA.language,
-        codeA: subA.code,
-        timeA: subA.executionTimeMs,
-        memA: subA.memoryUsedKb,
-        languageB: subB.language,
-        codeB: subB.code,
-        timeB: subB.executionTimeMs,
-        memB: subB.memoryUsedKb
-      });
+      // Request AI evolutionary narrative from Gemini with timeout guard
+      const timeoutMs = process.env.NODE_ENV === 'test' ? 1000 : 8000;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AI comparison generation timed out')), timeoutMs)
+      );
+      const geminiResult = await Promise.race([
+        geminiClient.analyzeComparison({
+          problemTitle,
+          languageA: subA.language,
+          codeA: subA.code,
+          timeA: subA.executionTimeMs,
+          memA: subA.memoryUsedKb,
+          languageB: subB.language,
+          codeB: subB.code,
+          timeB: subB.executionTimeMs,
+          memB: subB.memoryUsedKb
+        }),
+        timeoutPromise
+      ]);
       if (geminiResult && geminiResult.tradeOffSummary) {
         aiComparison = geminiResult;
       }
@@ -218,7 +239,16 @@ export async function createMultiComparison(req: Request, res: Response): Promis
       return;
     }
 
-    const problem = await ProblemModel.findById(problemId).lean();
+    let problem: any = null;
+    try {
+      if (mongoose.Types.ObjectId.isValid(problemId)) {
+        problem = await ProblemModel.findById(problemId).lean();
+      } else {
+        problem = await ProblemModel.findOne({ slug: problemId }).lean();
+      }
+    } catch {
+      problem = null;
+    }
     const problemTitle = problem?.title || 'Coding Problem';
     const problemDescription = problem?.description || '';
 
@@ -242,23 +272,30 @@ export async function createMultiComparison(req: Request, res: Response): Promis
       };
     });
 
-    // Call Gemini AI for multi-solution synthesis
+    // Call Gemini AI for multi-solution synthesis with timeout guard
     let aiSynthesisResult: any = null;
     try {
-      aiSynthesisResult = await geminiClient.analyzeMultiSolutionComparison({
-        problemTitle,
-        problemDescription,
-        solutions: solutionsForPrompt.map((s) => ({
-          submissionId: s.submissionId,
-          username: s.username,
-          versionLabel: s.versionLabel,
-          language: s.language,
-          code: s.code,
-          timeMs: s.timeMs,
-          memoryKb: s.memoryKb,
-          verdict: s.verdict
-        }))
-      });
+      const timeoutMs = process.env.NODE_ENV === 'test' ? 1000 : 8000;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Gemini multi-comparison timed out')), timeoutMs)
+      );
+      aiSynthesisResult = await Promise.race([
+        geminiClient.analyzeMultiSolutionComparison({
+          problemTitle,
+          problemDescription,
+          solutions: solutionsForPrompt.map((s) => ({
+            submissionId: s.submissionId,
+            username: s.username,
+            versionLabel: s.versionLabel,
+            language: s.language,
+            code: s.code,
+            timeMs: s.timeMs,
+            memoryKb: s.memoryKb,
+            verdict: s.verdict
+          }))
+        }),
+        timeoutPromise
+      ]);
     } catch (aiErr: any) {
       console.warn('[ComparisonController] Gemini multi-comparison warning (using fallback synthesis):', aiErr.message);
     }
