@@ -34,30 +34,29 @@ export function Navbar() {
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-3 text-sm font-medium">
-          <Link
-            to="/problems"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
-          >
-            <BookOpen className="w-4 h-4 text-emerald-600" />
-            Problems
-          </Link>
-          <Link
-            to="/algorithms"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
-          >
-            <Workflow className="w-4 h-4 text-indigo-600" />
-            Algorithms
-          </Link>
-          <Link
-            to="/leaderboard"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
-          >
-            <Trophy className="w-4 h-4 text-amber-600" />
-            Leaderboards
-          </Link>
-
           {isAuthenticated ? (
             <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
+              <Link
+                to="/problems"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
+              >
+                <BookOpen className="w-4 h-4 text-emerald-600" />
+                Problems
+              </Link>
+              <Link
+                to="/algorithms"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
+              >
+                <Workflow className="w-4 h-4 text-indigo-600" />
+                Algorithms
+              </Link>
+              <Link
+                to="/leaderboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
+              >
+                <Trophy className="w-4 h-4 text-amber-600" />
+                Leaderboards
+              </Link>
               <Link
                 to="/dashboard"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 text-xs sm:text-sm transition"
@@ -65,41 +64,80 @@ export function Navbar() {
                 <BarChart2 className="w-4 h-4 text-teal-600" />
                 Dashboard
               </Link>
-              <span className="text-xs text-slate-700 font-medium flex items-center gap-1.5 font-mono bg-slate-100 px-2.5 py-1 rounded-lg">
-                {profile?.avatarUrl ? (
-                  <img
-                    src={profile.avatarUrl}
-                    alt={user?.username}
-                    className="w-5 h-5 rounded-full object-cover border border-indigo-500/30"
-                  />
-                ) : (
-                  <UserIcon className="w-3.5 h-3.5 text-indigo-600" />
-                )}
-                {user?.username}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+              <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-200">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-1.5 text-xs text-slate-700 font-medium font-mono bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-200/60 hover:border-slate-300 transition group"
+                  title="View Your Developer Profile"
+                >
+                  {profile?.avatarUrl ? (
+                    <img
+                      src={profile.avatarUrl}
+                      alt={user?.username}
+                      className="w-5 h-5 rounded-full object-cover border border-emerald-500/40 group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <UserIcon className="w-3.5 h-3.5 text-indigo-600 group-hover:text-indigo-800 transition" />
+                  )}
+                  <span className="group-hover:text-slate-900 transition">{user?.username}</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </>
           ) : (
-            <div className="flex items-center gap-2 ml-2">
-              <Link
-                to="/login"
-                className="px-3.5 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50 font-medium text-xs transition"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-xs transition"
-              >
-                Get Started
-              </Link>
-            </div>
+            <>
+              {/* Landing Page Quick Navigation Anchors for Guest Visitors */}
+              <div className="hidden md:flex items-center gap-1 text-xs sm:text-sm text-slate-600 font-medium mr-2">
+                <a
+                  href="#live-diff"
+                  className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-slate-100/80 transition"
+                >
+                  Live Diff
+                </a>
+                <a
+                  href="#pipeline"
+                  className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-slate-100/80 transition"
+                >
+                  Pipeline
+                </a>
+                <a
+                  href="#features"
+                  className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-slate-100/80 transition"
+                >
+                  Features
+                </a>
+                <a
+                  href="#methodology"
+                  className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-slate-100/80 transition"
+                >
+                  Pedagogy
+                </a>
+              </div>
+              <div className="flex items-center gap-2 ml-1">
+                <Link
+                  to="/login"
+                  className="px-3.5 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50 font-medium text-xs transition"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="relative group px-4 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-white font-medium text-xs shadow-sm hover:shadow transition overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    Get Started
+                    <span className="text-emerald-400 font-bold group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                  </span>
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform ease-out" />
+                </Link>
+              </div>
+            </>
           )}
         </nav>
       </div>
