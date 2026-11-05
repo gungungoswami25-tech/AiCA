@@ -769,7 +769,7 @@ Second line: \`n\` integers space-separated.`,
           {
             id: 'tc-subsum-3',
             input: '5 0\n1 -1 1 -1 1',
-            expectedOutput: '4',
+            expectedOutput: '6',
             isPublic: false,
             isEdgeCase: true,
             explanation: 'Subarrays summing to zero'
