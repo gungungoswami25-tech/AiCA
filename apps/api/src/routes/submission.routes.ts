@@ -6,7 +6,8 @@ import {
   retryAiAnalysis,
   getMySubmissions,
   getActivityHeatmap,
-  runCustomCode
+  runCustomCode,
+  getProblemSolutions
 } from '../controllers/submission.controller.js';
 import { authenticateToken, optionalAuth } from '../middleware/auth.middleware.js';
 import { submissionRateLimiter } from '../middleware/rate-limiter.middleware.js';
@@ -14,6 +15,7 @@ import { handleSubmissionStatusSSE } from '../middleware/sse.middleware.js';
 
 const router = Router();
 
+router.get('/problem/:problemId/solutions', optionalAuth, getProblemSolutions);
 router.post('/run-custom', authenticateToken, submissionRateLimiter, runCustomCode);
 router.post('/', optionalAuth, submissionRateLimiter, createSubmission);
 router.get('/my', authenticateToken, getMySubmissions);

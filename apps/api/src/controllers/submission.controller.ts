@@ -517,3 +517,43 @@ export async function runCustomCode(req: Request, res: Response): Promise<void> 
     );
   }
 }
+
+export async function getProblemSolutions(req: Request, res: Response): Promise<void> {
+  const rawProblemId = req.params.problemId;
+  const problemId = String(Array.isArray(rawProblemId) ? rawProblemId[0] : rawProblemId);
+
+  try {
+    let pId = problemId;
+    if (problemId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(problemId)) {
+      const p = await ProblemModel.findOne({ slug: problemId }).lean();
+      if (p) pId = p._id.toString();
+    }
+
+    const submissions = await SubmissionModel.find({
+      problemId: pId,
+      pipelineStatus: 'COMPLETED'
+    })
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .lean();
+
+    const result = submissions.map((s) => ({
+      id: s._id.toString(),
+      submissionId: s._id.toString(),
+      problemId: s.problemId,
+      userId: s.userId,
+      username: s.username,
+      language: s.language,
+      verdict: s.verdict,
+      executionTimeMs: s.executionTimeMs,
+      memoryUsedKb: s.memoryUsedKb,
+      compositeScore: s.compositeScore,
+      aiStatus: s.aiStatus,
+      createdAt: s.createdAt
+    }));
+
+    res.status(200).json(createSuccessResponse(result));
+  } catch (err: any) {
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve problem solutions'));
+  }
+}

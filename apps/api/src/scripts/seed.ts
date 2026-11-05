@@ -9,6 +9,7 @@ import { ProblemModel } from '../models/mongodb/problem.model.js';
 import { SubmissionModel } from '../models/mongodb/submission.model.js';
 import { EvaluationReportModel } from '../models/mongodb/evaluation-report.model.js';
 import { SolutionComparisonModel } from '../models/mongodb/comparison.model.js';
+import { MultiSolutionComparisonModel } from '../models/mongodb/multi-comparison.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -786,6 +787,103 @@ Second line: \`n\` integers space-separated.`,
         totalSubmissions: 0,
         acceptedSubmissions: 0,
         createdBy: 'system_admin'
+      },
+      {
+        title: 'Sort 10,000 Numbers (Sorting Challenge)',
+        slug: 'sort-10000-numbers',
+        status: 'PUBLISHED',
+        difficulty: 'MEDIUM',
+        tags: ['Algorithms', 'Sorting', 'Divide-and-Conquer', 'Benchmark'],
+        description: `Given a list of numbers (up to 10,000 integers), sort the list in ascending numerical order.
+
+Input Format:
+First line contains integer n (1 <= n <= 10,000).
+Second line contains n space-separated integers.
+
+Output Format:
+Print the sorted integers separated by a single space.
+
+Notice for Algorithm Engineers:
+In the AI Code Evolution Lab, this challenge benchmarks how different algorithmic paradigms scale:
+- Student A: Bubble Sort (Version 1) - O(N^2)
+- Student B: Merge Sort (Version 2) - O(N log N)
+- Student C: Quick Sort (Version 3) - Average O(N log N)
+
+Note: Asymptotic Big-O complexity is theoretical. Actual execution time is empirically measured in the controlled sandbox environment.`,
+        constraints: [
+          '1 <= nums.length <= 10^4',
+          '-10^5 <= nums[i] <= 10^5'
+        ],
+        examples: [
+          {
+            input: '4\n5 2 3 1',
+            output: '1 2 3 5',
+            explanation: 'The sorted array in non-decreasing order is [1, 2, 3, 5].'
+          },
+          {
+            input: '6\n5 1 1 2 0 0',
+            output: '0 0 1 1 2 5',
+            explanation: 'Sorted array with duplicates.'
+          }
+        ],
+        timeLimitMs: 3000,
+        memoryLimitKb: 262144,
+        benchmarks: {
+          targetTimeMs: 25,
+          pythonMultiplier: 4.0,
+          jsMultiplier: 2.5,
+          cppMultiplier: 1.0,
+          javaMultiplier: 2.0
+        },
+        starterCode: {
+          python: `import sys\n\ndef sort_array(nums: list[int]) -> list[int]:\n    # Implement an efficient sorting algorithm (e.g. Merge Sort, Quick Sort, or Bubble Sort)\n    return sorted(nums)\n\nif __name__ == '__main__':\n    data = sys.stdin.read().split()\n    if data:\n        n = int(data[0])\n        nums = [int(x) for x in data[1:n+1]]\n        sorted_nums = sort_array(nums)\n        print(' '.join(map(str, sorted_nums)))\n`,
+          javascript: `const fs = require('fs');\nconst data = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);\nif (data.length > 1) {\n    const n = parseInt(data[0], 10);\n    const nums = data.slice(1, n + 1).map(Number);\n    nums.sort((a, b) => a - b);\n    console.log(nums.join(' '));\n}\n`,
+          cpp: `#include <iostream>\n#include <vector>\n#include <algorithm>\n\nint main() {\n    int n;\n    if (std::cin >> n) {\n        std::vector<int> nums(n);\n        for (int i = 0; i < n; ++i) std::cin >> nums[i];\n        std::sort(nums.begin(), nums.end());\n        for (int i = 0; i < n; ++i) std::cout << nums[i] << (i == n - 1 ? "" : " ");\n        std::cout << std::endl;\n    }\n    return 0;\n}\n`,
+          java: `import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] nums = new int[n];\n            for (int i = 0; i < n; i++) nums[i] = sc.nextInt();\n            Arrays.sort(nums);\n            StringBuilder sb = new StringBuilder();\n            for (int i = 0; i < n; i++) {\n                sb.append(nums[i]);\n                if (i < n - 1) sb.append(" ");\n            }\n            System.out.println(sb.toString());\n        }\n    }\n}\n`
+        },
+        testCases: [
+          {
+            id: 'tc-sort-1',
+            input: '4\n5 2 3 1',
+            expectedOutput: '1 2 3 5',
+            isPublic: true,
+            isEdgeCase: false
+          },
+          {
+            id: 'tc-sort-2',
+            input: '6\n5 1 1 2 0 0',
+            expectedOutput: '0 0 1 1 2 5',
+            isPublic: true,
+            isEdgeCase: false
+          },
+          {
+            id: 'tc-sort-3',
+            input: '10\n1 2 3 4 5 6 7 8 9 10',
+            expectedOutput: '1 2 3 4 5 6 7 8 9 10',
+            isPublic: false,
+            isEdgeCase: true,
+            explanation: 'Already sorted array'
+          },
+          {
+            id: 'tc-sort-4',
+            input: '8\n80 70 60 50 40 30 20 10',
+            expectedOutput: '10 20 30 40 50 60 70 80',
+            isPublic: false,
+            isEdgeCase: true,
+            explanation: 'Reverse sorted array'
+          },
+          {
+            id: 'tc-sort-5',
+            input: '7\n-3 10 -5 0 10 -3 2',
+            expectedOutput: '-5 -3 -3 0 2 10 10',
+            isPublic: false,
+            isEdgeCase: true,
+            explanation: 'Negative numbers with duplicates'
+          }
+        ],
+        totalSubmissions: 3,
+        acceptedSubmissions: 3,
+        createdBy: 'system_admin'
       }
     ];
 
@@ -1151,6 +1249,412 @@ Second line: \`n\` integers space-separated.`,
           { upsert: true, new: true }
         );
       }
+    }
+
+    // 3B. Sorting Challenge Collaborative Multi-Solution Evolution Showcase
+    const sortProblem = problemMap['sort-10000-numbers'];
+    if (sortProblem) {
+      console.log('[Seed] Seeding Sorting Problem 3-Student Collaborative Submissions & Multi-Solution Matrix...');
+
+      const bubbleSortCode = `import sys
+
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        for j in range(0, n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+
+if __name__ == '__main__':
+    data = sys.stdin.read().split()
+    if data:
+        n = int(data[0])
+        nums = [int(x) for x in data[1:n+1]]
+        sorted_nums = bubble_sort(nums)
+        print(' '.join(map(str, sorted_nums)))`;
+
+      const sortSubA = await SubmissionModel.findOneAndUpdate(
+        { userId: studentId, problemId: sortProblem._id.toString() },
+        {
+          userId: studentId,
+          username: 'algo_student',
+          problemId: sortProblem._id.toString(),
+          language: 'python',
+          languageId: 71,
+          code: bubbleSortCode,
+          codeLength: bubbleSortCode.length,
+          isTestRun: false,
+          pipelineStatus: 'COMPLETED',
+          verdict: 'ACCEPTED',
+          executionTimeMs: 420,
+          memoryUsedKb: 14200,
+          normalizedTimeMs: 420,
+          compositeScore: 68.5,
+          testCasesTotal: 5,
+          testCasesPassed: 5,
+          aiStatus: 'COMPLETED',
+          leaderboardSyncPending: false
+        },
+        { upsert: true, new: true }
+      );
+
+      await EvaluationReportModel.findOneAndUpdate(
+        { submissionId: sortSubA._id.toString() },
+        {
+          submissionId: sortSubA._id.toString(),
+          userId: studentId,
+          username: 'algo_student',
+          problemId: sortProblem._id.toString(),
+          verdict: 'ACCEPTED',
+          pipelineStatus: 'COMPLETED',
+          summary: 'Student A (Version 1) - Bubble Sort evaluated. 5/5 test cases passed.',
+          aiAnalysis: {
+            status: 'COMPLETED',
+            mode: 'OPTIMIZATION',
+            codeSummary: 'Nested loop bubble sort comparing adjacent elements. Simple in-place approach, but suffers from O(N^2) quadratic comparisons on larger lists.',
+            theoreticalComplexity: {
+              timeComplexity: 'O(N^2)',
+              spaceComplexity: 'O(1)',
+              explanation: 'Exhibits nested loops iterating over n elements, executing n*(n-1)/2 comparisons. Constant auxiliary memory O(1).'
+            },
+            codeQuality: {
+              score: 6.5,
+              readabilityAnalysis: 'Straightforward procedural code, but lacks modular decomposition and early swap termination.',
+              codeSmells: ['Quadratic time complexity causes severe CPU throttling on 10,000 numbers (~50M comparisons)', 'Missing swapped flag'],
+              positivePractices: ['Minimal auxiliary memory O(1)', 'In-place sorting']
+            },
+            optimizationSuggestions: [
+              {
+                title: 'Add Early Termination Flag',
+                rationale: 'Stop passes when no swaps occur, reducing best-case to O(N).',
+                expectedTimeImpact: 'Improves best-case to O(N)',
+                refactoredSnippet: 'swapped = False\nfor j in range(0, n - i - 1):\n    if arr[j] > arr[j+1]: arr[j], arr[j+1] = arr[j+1], arr[j]; swapped = True\nif not swapped: break'
+              }
+            ],
+            generatedAt: new Date().toISOString()
+          },
+          metrics: {
+            rawTimeMs: 420,
+            normalizedTimeMs: 420,
+            rawMemoryKb: 14200,
+            normalizedMemoryKb: 14200,
+            compositeScore: 68.5,
+            percentileTime: 35,
+            percentileMemory: 95
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      const mergeSortCode = `import sys
+
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+if __name__ == '__main__':
+    data = sys.stdin.read().split()
+    if data:
+        n = int(data[0])
+        nums = [int(x) for x in data[1:n+1]]
+        sorted_nums = merge_sort(nums)
+        print(' '.join(map(str, sorted_nums)))`;
+
+      const sortSubB = await SubmissionModel.findOneAndUpdate(
+        { userId: alanId, problemId: sortProblem._id.toString() },
+        {
+          userId: alanId,
+          username: 'alan_turing',
+          problemId: sortProblem._id.toString(),
+          language: 'python',
+          languageId: 71,
+          code: mergeSortCode,
+          codeLength: mergeSortCode.length,
+          isTestRun: false,
+          pipelineStatus: 'COMPLETED',
+          verdict: 'ACCEPTED',
+          executionTimeMs: 28,
+          memoryUsedKb: 18900,
+          normalizedTimeMs: 28,
+          compositeScore: 92.0,
+          testCasesTotal: 5,
+          testCasesPassed: 5,
+          aiStatus: 'COMPLETED',
+          leaderboardSyncPending: false
+        },
+        { upsert: true, new: true }
+      );
+
+      await EvaluationReportModel.findOneAndUpdate(
+        { submissionId: sortSubB._id.toString() },
+        {
+          submissionId: sortSubB._id.toString(),
+          userId: alanId,
+          username: 'alan_turing',
+          problemId: sortProblem._id.toString(),
+          verdict: 'ACCEPTED',
+          pipelineStatus: 'COMPLETED',
+          summary: 'Student B (Version 2) - Merge Sort evaluated. 5/5 test cases passed.',
+          aiAnalysis: {
+            status: 'COMPLETED',
+            mode: 'OPTIMIZATION',
+            codeSummary: 'Divide-and-conquer recursive halving and linear merging. Guarantees O(N log N) time complexity across all input distributions.',
+            theoreticalComplexity: {
+              timeComplexity: 'O(N log N)',
+              spaceComplexity: 'O(N)',
+              explanation: 'Array is recursively halved log2(n) times, requiring O(n) work per level. Auxiliary space O(N) due to slice allocations.'
+            },
+            codeQuality: {
+              score: 9.0,
+              readabilityAnalysis: 'Clean functional decomposition with idiomatic slice syntax and clear two-pointer merge logic.',
+              codeSmells: ['Slice operations arr[:mid] and arr[mid:] allocate new memory buffers at every recursive frame'],
+              positivePractices: ['Guaranteed O(N log N) worst-case time', 'Stable sort preserving duplicate order']
+            },
+            optimizationSuggestions: [
+              {
+                title: 'Pass Index Pointers Instead of Slicing',
+                rationale: 'Reduce memory allocation pressure by working over indices low, mid, high with single auxiliary buffer.',
+                expectedTimeImpact: 'Cuts memory overhead by ~40%',
+                refactoredSnippet: 'def merge(arr, aux, low, mid, high): ...'
+              }
+            ],
+            generatedAt: new Date().toISOString()
+          },
+          metrics: {
+            rawTimeMs: 28,
+            normalizedTimeMs: 28,
+            rawMemoryKb: 18900,
+            normalizedMemoryKb: 18900,
+            compositeScore: 92.0,
+            percentileTime: 92,
+            percentileMemory: 70
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      const quickSortCode = `import sys
+
+def quick_sort(arr, low, high):
+    if low < high:
+        pi = partition(arr, low, high)
+        quick_sort(arr, low, pi - 1)
+        quick_sort(arr, pi + 1, high)
+
+def partition(arr, low, high):
+    pivot = arr[high]
+    i = low - 1
+    for j in range(low, high):
+        if arr[j] <= pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
+    arr[i + 1], arr[high] = arr[high], arr[i + 1]
+    return i + 1
+
+if __name__ == '__main__':
+    data = sys.stdin.read().split()
+    if data:
+        n = int(data[0])
+        nums = [int(x) for x in data[1:n+1]]
+        quick_sort(nums, 0, n - 1)
+        print(' '.join(map(str, nums)))`;
+
+      const sortSubC = await SubmissionModel.findOneAndUpdate(
+        { userId: adaId, problemId: sortProblem._id.toString() },
+        {
+          userId: adaId,
+          username: 'ada_lovelace',
+          problemId: sortProblem._id.toString(),
+          language: 'python',
+          languageId: 71,
+          code: quickSortCode,
+          codeLength: quickSortCode.length,
+          isTestRun: false,
+          pipelineStatus: 'COMPLETED',
+          verdict: 'ACCEPTED',
+          executionTimeMs: 18,
+          memoryUsedKb: 14600,
+          normalizedTimeMs: 18,
+          compositeScore: 96.5,
+          testCasesTotal: 5,
+          testCasesPassed: 5,
+          aiStatus: 'COMPLETED',
+          leaderboardSyncPending: false
+        },
+        { upsert: true, new: true }
+      );
+
+      await EvaluationReportModel.findOneAndUpdate(
+        { submissionId: sortSubC._id.toString() },
+        {
+          submissionId: sortSubC._id.toString(),
+          userId: adaId,
+          username: 'ada_lovelace',
+          problemId: sortProblem._id.toString(),
+          verdict: 'ACCEPTED',
+          pipelineStatus: 'COMPLETED',
+          summary: 'Student C (Version 3) - Quick Sort evaluated. 5/5 test cases passed.',
+          aiAnalysis: {
+            status: 'COMPLETED',
+            mode: 'OPTIMIZATION',
+            codeSummary: 'In-place Lomuto partitioning with recursive sub-array sorting. Extremely fast in-memory execution due to low constant factors and cache locality.',
+            theoreticalComplexity: {
+              timeComplexity: 'Average O(N log N), Worst O(N^2)',
+              spaceComplexity: 'O(log N)',
+              explanation: 'Average case performs O(N log N) comparisons with O(log N) stack frames. Fixed pivot on presorted input causes worst-case O(N^2) depth.'
+            },
+            codeQuality: {
+              score: 8.5,
+              readabilityAnalysis: 'Modular partitioning logic and clear recursion bounds.',
+              codeSmells: ['Rightmost pivot choice degrades to O(N^2) on sorted/reverse-sorted inputs', 'Recursion stack without tail-call optimization'],
+              positivePractices: ['In-place partitioning minimizes auxiliary memory', 'High CPU cache locality']
+            },
+            optimizationSuggestions: [
+              {
+                title: 'Randomized or Median-of-Three Pivot Selection',
+                rationale: 'Avoids worst-case O(N^2) degradation on presorted datasets.',
+                expectedTimeImpact: 'Prevents recursion depth overflow',
+                refactoredSnippet: 'import random\ndef randomized_partition(arr, low, high):\n    rand_idx = random.randint(low, high)\n    arr[high], arr[rand_idx] = arr[rand_idx], arr[high]\n    return partition(arr, low, high)'
+              }
+            ],
+            generatedAt: new Date().toISOString()
+          },
+          metrics: {
+            rawTimeMs: 18,
+            normalizedTimeMs: 18,
+            rawMemoryKb: 14600,
+            normalizedMemoryKb: 14600,
+            compositeScore: 96.5,
+            percentileTime: 97,
+            percentileMemory: 90
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      // Seed Multi-Solution Comparison Document
+      await MultiSolutionComparisonModel.findOneAndUpdate(
+        { problemId: sortProblem._id.toString() },
+        {
+          problemId: sortProblem._id.toString(),
+          problemTitle: 'Sort 10,000 Numbers (Sorting Challenge)',
+          solutions: [
+            {
+              submissionId: sortSubA._id.toString(),
+              userId: studentId,
+              username: 'algo_student',
+              versionLabel: 'Version 1',
+              algorithmName: 'Bubble Sort',
+              language: 'python',
+              code: bubbleSortCode,
+              verdict: 'ACCEPTED',
+              executionTimeMs: 420,
+              memoryUsedKb: 14200,
+              timeComplexity: 'O(N^2)',
+              spaceComplexity: 'O(1)',
+              qualityScore: 6.5,
+              compositeScore: 68.5,
+              keyStrengths: ['In-place sorting with O(1) auxiliary memory', 'Simple and intuitive logic'],
+              weaknessesOrBottlenecks: ['Quadratic O(N^2) time causes severe slowdown on large arrays', 'Performs excessive swaps without early break'],
+              optimizationNotes: 'Add swapped flag to achieve O(N) best-case on presorted data.',
+              createdAt: new Date().toISOString()
+            },
+            {
+              submissionId: sortSubB._id.toString(),
+              userId: alanId,
+              username: 'alan_turing',
+              versionLabel: 'Version 2',
+              algorithmName: 'Merge Sort',
+              language: 'python',
+              code: mergeSortCode,
+              verdict: 'ACCEPTED',
+              executionTimeMs: 28,
+              memoryUsedKb: 18900,
+              timeComplexity: 'O(N log N)',
+              spaceComplexity: 'O(N)',
+              qualityScore: 9.0,
+              compositeScore: 92.0,
+              keyStrengths: ['Guaranteed O(N log N) runtime in all scenarios', 'Stable sorting algorithm'],
+              weaknessesOrBottlenecks: ['Requires O(N) auxiliary memory for merging', 'Frequent array slicing incurs GC overhead'],
+              optimizationNotes: 'Use index pointers and an in-place preallocated merge buffer.',
+              createdAt: new Date().toISOString()
+            },
+            {
+              submissionId: sortSubC._id.toString(),
+              userId: adaId,
+              username: 'ada_lovelace',
+              versionLabel: 'Version 3',
+              algorithmName: 'Quick Sort',
+              language: 'python',
+              code: quickSortCode,
+              verdict: 'ACCEPTED',
+              executionTimeMs: 18,
+              memoryUsedKb: 14600,
+              timeComplexity: 'Average O(N log N)',
+              spaceComplexity: 'O(log N)',
+              qualityScore: 8.5,
+              compositeScore: 96.5,
+              keyStrengths: ['Fastest empirical runtime (18ms) in controlled sandbox', 'In-place partitioning with minimal stack memory'],
+              weaknessesOrBottlenecks: ['Naive pivot selection risks O(N^2) degradation on presorted arrays', 'Unstable sort'],
+              optimizationNotes: 'Implement median-of-three or randomized pivot selection.',
+              createdAt: new Date().toISOString()
+            }
+          ],
+          matrixComparison: {
+            theoreticalRankings: [
+              {
+                algorithmName: 'Merge Sort',
+                timeComplexity: 'O(N log N)',
+                spaceComplexity: 'O(N)',
+                rank: 1,
+                rationale: 'Guaranteed O(N log N) upper bound regardless of input ordering, ideal for mission-critical systems.'
+              },
+              {
+                algorithmName: 'Quick Sort',
+                timeComplexity: 'Average O(N log N)',
+                spaceComplexity: 'O(log N)',
+                rank: 2,
+                rationale: 'Fastest practical runtime due to low constant factors and cache locality, but needs randomized pivot to guard against O(N^2).'
+              },
+              {
+                algorithmName: 'Bubble Sort',
+                timeComplexity: 'O(N^2)',
+                spaceComplexity: 'O(1)',
+                rank: 3,
+                rationale: 'Optimal O(1) space, but catastrophic O(N^2) time complexity makes it unusable for N=10,000 (~50M comparisons).'
+              }
+            ],
+            empiricalAnalysis: {
+              fastestSubmissionId: sortSubC._id.toString(),
+              lowestMemorySubmissionId: sortSubA._id.toString(),
+              runtimeRangeMs: '18ms - 420ms (23x speedup)',
+              memoryRangeKb: '14MB - 19MB'
+            },
+            evolutionarySynthesis:
+              'The 3 student submissions demonstrate a classic textbook evolutionary progression from naive iterative sorting to modern divide-and-conquer algorithms:\n- Version 1 (Bubble Sort): Operates via adjacent swaps. While memory is optimal O(1), sorting 10,000 numbers requires ~50,000,000 operations, leading to 420ms execution.\n- Version 2 (Merge Sort): Halves the array recursively, guaranteeing O(N log N) time and finishing in 28ms. However, it requires O(N) auxiliary space (~18.9MB).\n- Version 3 (Quick Sort): Combines in-place partitioning with O(log N) stack frames. In our controlled testing sandbox, it delivers the fastest empirical runtime (18ms) due to superior CPU cache locality, provided pivot choice is randomized against presorted traps.',
+            pedagogicalTakeaway:
+              'Choose Merge Sort when stability and strict worst-case guarantees are required (e.g. database query engines); choose Quick Sort with randomized pivots for standard general-purpose in-memory sorting; avoid Bubble Sort except for pedagogical demonstration on trivial datasets.'
+          }
+        },
+        { upsert: true, new: true }
+      );
     }
 
     console.log('[Seed] Realistic submissions, AI reports, comparisons and competitive leaderboard profiles seeded successfully.');
