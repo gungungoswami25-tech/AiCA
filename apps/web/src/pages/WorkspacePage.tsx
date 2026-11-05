@@ -253,6 +253,7 @@ export function WorkspacePage() {
                 <EvaluationReportView
                   report={report}
                   onCompareRequest={handleCompareClick}
+                  onReportUpdate={setReport}
                 />
               ) : (
                 <div className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">

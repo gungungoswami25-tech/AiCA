@@ -21,6 +21,14 @@ submissionQueue.on('error', (err) => {
   console.warn('[SubmissionQueue] Redis queue warning:', err.message);
 });
 
+export const aiAnalysisQueue = new Queue('ai-analysis-queue', {
+  connection: redisClient
+});
+
+aiAnalysisQueue.on('error', (err) => {
+  console.warn('[AiAnalysisQueue] Redis queue warning:', err.message);
+});
+
 export async function createSubmission(req: Request, res: Response): Promise<void> {
   const parseResult = SubmissionRequestSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -173,6 +181,89 @@ export async function getEvaluationReport(req: Request, res: Response): Promise<
     res.status(200).json(createSuccessResponse(result));
   } catch (err: any) {
     res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve report'));
+  }
+}
+
+export async function retryAiAnalysis(req: Request, res: Response): Promise<void> {
+  const { submissionId } = req.params;
+
+  try {
+    const submission = await SubmissionModel.findById(submissionId);
+    if (!submission) {
+      res.status(404).json(createErrorResponse('NOT_FOUND', 'Submission not found'));
+      return;
+    }
+
+    if (submission.verdict === 'PENDING') {
+      res.status(400).json(
+        createErrorResponse(
+          'INVALID_STATE',
+          'Deterministic evaluation is still pending. AI analysis cannot be initiated yet.'
+        )
+      );
+      return;
+    }
+
+    if (submission.verdict === 'COMPILATION_ERROR') {
+      res.status(400).json(
+        createErrorResponse(
+          'INVALID_STATE',
+          'AI analysis is bypassed for compilation errors.'
+        )
+      );
+      return;
+    }
+
+    // Mark AI status as PENDING
+    await SubmissionModel.findByIdAndUpdate(submissionId, {
+      aiStatus: 'PENDING',
+      aiError: ''
+    });
+
+    await EvaluationReportModel.findOneAndUpdate(
+      { submissionId },
+      { $set: { 'aiAnalysis.status': 'PENDING' } }
+    );
+
+    // Enqueue to aiAnalysisQueue
+    await aiAnalysisQueue.add(
+      'analyze-submission-ai',
+      {
+        submissionId: submission._id.toString(),
+        problemId: submission.problemId,
+        userId: submission.userId,
+        username: submission.username,
+        language: submission.language,
+        code: submission.code,
+        verdict: submission.verdict,
+        executionTimeMs: submission.executionTimeMs,
+        memoryUsedKb: submission.memoryUsedKb,
+        passedCount: submission.testCasesPassed,
+        totalCount: submission.testCasesTotal,
+        compileOutput: submission.compileOutput,
+        isTestRun: submission.isTestRun
+      },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: 100,
+        removeOnFail: 500
+      }
+    );
+
+    res.status(202).json(
+      createSuccessResponse(
+        {
+          submissionId: submission._id.toString(),
+          verdict: submission.verdict,
+          aiStatus: 'PENDING'
+        },
+        'AI analysis queued for asynchronous retry'
+      )
+    );
+  } catch (err: any) {
+    console.error('[SubmissionController] retryAiAnalysis error:', err.message);
+    res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to schedule AI analysis retry'));
   }
 }
 
