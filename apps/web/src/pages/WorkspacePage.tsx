@@ -194,30 +194,30 @@ export function WorkspacePage() {
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       {/* Workspace Subheader */}
-      <div className="px-6 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+      <div className="px-6 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
             to="/problems"
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition"
+            className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
           >
             <ChevronLeft className="w-4 h-4" />
             Problems
           </Link>
-          <span className="text-slate-600">/</span>
-          <h1 className="text-sm font-bold text-slate-200">{problem.title}</h1>
-          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="text-slate-400 dark:text-slate-600">/</span>
+          <h1 className="text-sm font-bold text-slate-900 dark:text-slate-200">{problem.title}</h1>
+          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
             {problem.difficulty}
           </span>
         </div>
 
         {/* Tab Switcher for Left Panel */}
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold">
           <button
             onClick={() => setActiveLeftTab('desc')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
               activeLeftTab === 'desc'
-                ? 'bg-slate-800 text-indigo-400 shadow'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -227,8 +227,8 @@ export function WorkspacePage() {
             onClick={() => setActiveLeftTab('report')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
               activeLeftTab === 'report'
-                ? 'bg-slate-800 text-indigo-400 shadow'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -241,8 +241,8 @@ export function WorkspacePage() {
             }}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
               activeLeftTab === 'compare'
-                ? 'bg-slate-800 text-indigo-400 shadow'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <ArrowLeftRight className="w-3.5 h-3.5" />
@@ -252,18 +252,18 @@ export function WorkspacePage() {
       </div>
 
       {/* Main Dual-Pane Canvas */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 overflow-hidden bg-slate-950">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 overflow-hidden bg-slate-100/60 dark:bg-slate-950">
         {/* Left Pane (Description / Report / Comparison) */}
         <div className="h-full overflow-y-auto pr-2">
           {activeLeftTab === 'desc' && (
-            <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-6">
+            <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-6 shadow-xs">
               <div>
-                <h2 className="text-2xl font-bold text-slate-100">{problem.title}</h2>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{problem.title}</h2>
                 <div className="flex items-center gap-2 mt-2">
                   {problem.tags.map((t) => (
                     <span
                       key={t}
-                      className="text-xs px-2.5 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300"
+                      className="text-xs px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
                     >
                       {t}
                     </span>
@@ -271,25 +271,25 @@ export function WorkspacePage() {
                 </div>
               </div>
 
-              <div className="prose prose-invert text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+              <div className="prose dark:prose-invert text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                 {problem.description}
               </div>
 
               {/* Examples */}
               <div className="space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Examples</h3>
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Examples</h3>
                 {problem.examples.map((ex, idx) => (
-                  <div key={idx} className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-2">
+                  <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-2">
                     <div>
-                      <span className="text-slate-500 font-sans block mb-1">Input:</span>
-                      <pre className="text-slate-200">{ex.input}</pre>
+                      <span className="text-slate-500 dark:text-slate-400 font-sans block mb-1">Input:</span>
+                      <pre className="text-slate-800 dark:text-slate-200">{ex.input}</pre>
                     </div>
                     <div>
-                      <span className="text-slate-500 font-sans block mb-1">Output:</span>
-                      <pre className="text-emerald-400">{ex.output}</pre>
+                      <span className="text-slate-500 dark:text-slate-400 font-sans block mb-1">Output:</span>
+                      <pre className="text-emerald-600 dark:text-emerald-400">{ex.output}</pre>
                     </div>
                     {ex.explanation && (
-                      <p className="text-slate-400 font-sans text-xs pt-1 border-t border-slate-800/80">
+                      <p className="text-slate-600 dark:text-slate-400 font-sans text-xs pt-1 border-t border-slate-200 dark:border-slate-800/80">
                         {ex.explanation}
                       </p>
                     )}
@@ -299,8 +299,8 @@ export function WorkspacePage() {
 
               {/* Constraints */}
               <div className="space-y-2">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Constraints</h3>
-                <ul className="list-disc list-inside text-xs text-slate-400 space-y-1 font-mono">
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Constraints</h3>
+                <ul className="list-disc list-inside text-xs text-slate-600 dark:text-slate-400 space-y-1 font-mono">
                   {problem.constraints.map((c, idx) => (
                     <li key={idx}>{c}</li>
                   ))}
@@ -308,8 +308,8 @@ export function WorkspacePage() {
               </div>
 
               {/* Benchmarks */}
-              <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20 text-xs text-indigo-300 space-y-1">
-                <span className="font-semibold block text-indigo-200">Execution Sandbox Limits:</span>
+              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/20 text-xs text-indigo-900 dark:text-indigo-300 space-y-1">
+                <span className="font-semibold block text-indigo-700 dark:text-indigo-200">Execution Sandbox Limits:</span>
                 <div>Time Limit: {problem.timeLimitMs}ms &bull; Memory Limit: {Math.round(problem.memoryLimitKb / 1024)}MB</div>
                 <div>Optimal Benchmark Target: {problem.benchmarks?.targetTimeMs || 15}ms</div>
               </div>
@@ -324,7 +324,7 @@ export function WorkspacePage() {
                   onCompareRequest={handleCompareClick}
                 />
               ) : (
-                <div className="p-12 text-center text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">
+                <div className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
                   Submit code to generate an AI evaluation report and complexity profile.
                 </div>
               )}
@@ -336,7 +336,7 @@ export function WorkspacePage() {
               {comparison ? (
                 <SolutionComparisonView comparison={comparison} />
               ) : (
-                <div className="p-12 text-center text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">
+                <div className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
                   Select two accepted submissions to perform a side-by-side evolution analysis.
                 </div>
               )}

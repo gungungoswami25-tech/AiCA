@@ -33,17 +33,17 @@ export function RegisterPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-4 min-h-[calc(100vh-120px)]">
-      <div className="w-full max-w-[420px] px-8 sm:px-10 py-10 rounded-2xl bg-[#232936] border border-slate-800/80 shadow-2xl">
+      <div className="w-full max-w-[420px] px-8 sm:px-10 py-10 rounded-2xl bg-white dark:bg-[#232936] border border-slate-200 dark:border-slate-800/80 shadow-xl dark:shadow-2xl">
         {/* Brand Logo Header */}
         <div className="text-center pb-8 pt-2">
-          <h1 className="text-4xl font-extrabold italic tracking-tight text-white font-sans select-none">
+          <h1 className="text-4xl font-extrabold italic tracking-tight text-slate-900 dark:text-white font-sans select-none">
             AiCA
           </h1>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 text-center">
+          <div className="mb-6 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-500 dark:text-rose-400 text-center">
             {error}
           </div>
         )}
@@ -57,7 +57,7 @@ export function RegisterPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
-              className="w-full bg-transparent border-b border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-100 placeholder-slate-400 focus:outline-none transition text-sm font-sans"
+              className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
           </div>
 
@@ -68,7 +68,7 @@ export function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email Address"
-              className="w-full bg-transparent border-b border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-100 placeholder-slate-400 focus:outline-none transition text-sm font-sans"
+              className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
           </div>
 
@@ -79,7 +79,7 @@ export function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password (Min 8 chars, 1 uppercase, 1 digit)"
-              className="w-full bg-transparent border-b border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-100 placeholder-slate-400 focus:outline-none transition text-sm font-sans"
+              className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-[#ee495c] pb-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none transition text-sm font-sans"
             />
           </div>
 
@@ -94,8 +94,8 @@ export function RegisterPage() {
 
         {/* Divider */}
         <div className="relative flex items-center justify-center my-6">
-          <div className="w-full border-t border-slate-700/80" />
-          <span className="absolute bg-[#232936] px-3 text-xs text-slate-400 font-normal">
+          <div className="w-full border-t border-slate-200 dark:border-slate-700/80" />
+          <span className="absolute bg-white dark:bg-[#232936] px-3 text-xs text-slate-500 dark:text-slate-400 font-normal">
             or
           </span>
         </div>
@@ -104,9 +104,9 @@ export function RegisterPage() {
         <GoogleSignInButton onError={(msg) => setError(msg)} text="signup_with" label="Sign up with Google" />
 
         {/* Bottom Switcher */}
-        <div className="border-t border-slate-700/80 my-8" />
+        <div className="border-t border-slate-200 dark:border-slate-700/80 my-8" />
 
-        <div className="text-center text-xs text-slate-400">
+        <div className="text-center text-xs text-slate-600 dark:text-slate-400">
           Already have an account?{' '}
           <Link
             to="/login"

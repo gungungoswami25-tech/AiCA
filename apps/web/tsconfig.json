@@ -20,9 +20,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     "paths": {
       "@aica/shared": [
         "../../packages/shared/src/index.ts"

@@ -91,11 +91,11 @@ export function LeaderboardPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-100 flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-amber-400" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <Trophy className="w-8 h-8 text-amber-500 dark:text-amber-400" />
             Platform Leaderboards
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Transparent composite scoring based on execution runtime, auxiliary memory, and AI code quality.
           </p>
         </div>
@@ -104,7 +104,7 @@ export function LeaderboardPage() {
           <select
             value={selectedProblem}
             onChange={(e) => setSelectedProblem(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-medium"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-medium shadow-xs"
           >
             <option value="two-sum-optimal">Two Sum Optimal</option>
             <option value="longest-substring">Longest Substring Without Repeating</option>
@@ -114,7 +114,7 @@ export function LeaderboardPage() {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-slate-500 font-mono">Loading rankings...</div>
+        <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-mono">Loading rankings...</div>
       ) : (
         <LeaderboardView
           rankings={rankings}

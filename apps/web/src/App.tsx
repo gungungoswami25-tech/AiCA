@@ -33,7 +33,7 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-[#FAFAFC] text-slate-900 selection:bg-emerald-100 selection:text-emerald-950 font-sans">
+        <div className="min-h-screen flex flex-col bg-[#FAFAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-100 dark:selection:bg-emerald-900 selection:text-emerald-950 dark:selection:text-emerald-100 font-sans transition-colors duration-200">
           <Navbar />
           <main className="flex-1 flex flex-col">
             <Routes>
@@ -50,27 +50,27 @@ export default function App() {
               <Route path="/register" element={<RegisterPage />} />
             </Routes>
           </main>
-          <footer className="border-t border-slate-200/90 bg-white py-10 text-center text-xs text-slate-500">
+          <footer className="border-t border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/90 py-10 text-center text-xs text-slate-500 dark:text-slate-400 transition-colors duration-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-800">AI Code Evolution Lab</span>
-                <span className="text-slate-400">&bull;</span>
-                <span className="text-emerald-700 font-mono text-[11px] font-semibold">GV2 Release</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">AI Code Evolution Lab</span>
+                <span className="text-slate-400 dark:text-slate-600">&bull;</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-semibold">GV2 Release</span>
               </div>
-              <div className="flex items-center gap-6 text-slate-600">
-                <Link to="/problems" className="hover:text-slate-900 transition">Catalog</Link>
-                <Link to="/algorithms" className="hover:text-slate-900 transition">Visualizer</Link>
-                <Link to="/leaderboard" className="hover:text-slate-900 transition">Rankings</Link>
+              <div className="flex items-center gap-6 text-slate-600 dark:text-slate-400">
+                <Link to="/problems" className="hover:text-slate-900 dark:hover:text-white transition">Catalog</Link>
+                <Link to="/algorithms" className="hover:text-slate-900 dark:hover:text-white transition">Visualizer</Link>
+                <Link to="/leaderboard" className="hover:text-slate-900 dark:hover:text-white transition">Rankings</Link>
                 <a
                   href="https://github.com/mohankunjam25-hue/AiCA"
                   target="_blank"
                   rel="noreferrer"
-                  className="hover:text-slate-900 transition"
+                  className="hover:text-slate-900 dark:hover:text-white transition"
                 >
                   GitHub
                 </a>
               </div>
-              <p className="text-slate-400">
+              <p className="text-slate-400 dark:text-slate-500">
                 &copy; {new Date().getFullYear()} Team AICA. Built for collaborative code analysis.
               </p>
             </div>
