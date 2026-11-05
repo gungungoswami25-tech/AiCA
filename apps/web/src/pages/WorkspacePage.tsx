@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { BookOpen, Sparkles, ArrowLeftRight, ChevronLeft, ShieldCheck } from 'lucide-react';
+import {
+  BookOpen,
+  Sparkles,
+  ArrowLeftRight,
+  ChevronLeft,
+  ShieldCheck,
+  History,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Code2,
+  X,
+  Loader2
+} from 'lucide-react';
 import { Problem, EvaluationReport, SolutionComparison, LANGUAGE_CONFIGS } from '@aica/shared';
 import { MonacoWorkspace } from '../components/MonacoWorkspace';
 import { EvaluationReportView } from '../components/EvaluationReportView';
@@ -11,9 +24,12 @@ export function WorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeLeftTab, setActiveLeftTab] = useState<'desc' | 'report' | 'compare'>('desc');
+  const [activeLeftTab, setActiveLeftTab] = useState<'desc' | 'report' | 'compare' | 'submissions'>('desc');
   const [report, setReport] = useState<EvaluationReport | null>(null);
   const [comparison, setComparison] = useState<SolutionComparison | null>(null);
+  const [pastSubmissions, setPastSubmissions] = useState<any[]>([]);
+  const [loadingPastSubmissions, setLoadingPastSubmissions] = useState(false);
+  const [inspectedCode, setInspectedCode] = useState<{ code: string; language: string; verdict: string; date: string } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -34,11 +50,25 @@ export function WorkspacePage() {
     }
   };
 
+  const fetchProblemSubmissions = async () => {
+    if (!problem?.id) return;
+    setLoadingPastSubmissions(true);
+    try {
+      const res = await api.get(`/submissions/my?problemId=${problem.id}&limit=20`);
+      setPastSubmissions(res.data?.data?.submissions || []);
+    } catch (err: any) {
+      console.warn('[WorkspacePage] Submissions fetch failed:', err.message);
+    } finally {
+      setLoadingPastSubmissions(false);
+    }
+  };
+
   const handleEvaluationComplete = async (reportId: string, submissionId: string) => {
     try {
       const res = await api.get(`/submissions/${submissionId}/report`);
       setReport(res.data.data);
       setActiveLeftTab('report');
+      fetchProblemSubmissions();
     } catch (err: any) {
       console.warn('[WorkspacePage] Evaluation report deferred or not found:', err.message);
     }
@@ -135,6 +165,20 @@ export function WorkspacePage() {
             <ArrowLeftRight className="w-3.5 h-3.5" />
             Compare Solutions
           </button>
+          <button
+            onClick={() => {
+              fetchProblemSubmissions();
+              setActiveLeftTab('submissions');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+              activeLeftTab === 'submissions'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            Submissions {pastSubmissions.length > 0 ? `(${pastSubmissions.length})` : ''}
+          </button>
         </div>
       </div>
 
@@ -229,6 +273,94 @@ export function WorkspacePage() {
               )}
             </div>
           )}
+
+          {activeLeftTab === 'submissions' && (
+            <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Your Problem Submissions</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Prior sandbox kernel test runs for this problem</p>
+                </div>
+                <button
+                  onClick={fetchProblemSubmissions}
+                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {loadingPastSubmissions ? (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                  <p className="text-xs">Loading past submissions...</p>
+                </div>
+              ) : pastSubmissions.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                  <History className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-xs">No prior submissions recorded for this problem yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pastSubmissions.map((sub) => {
+                    const isAccepted = sub.verdict === 'ACCEPTED';
+                    return (
+                      <div
+                        key={sub.id}
+                        className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          {isAccepted ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                          )}
+                          <div>
+                            <div className="font-bold font-mono text-slate-800 dark:text-slate-200">
+                              {sub.verdict}
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                              <span className="uppercase font-semibold">{sub.language}</span>
+                              <span>&bull;</span>
+                              <span>{new Date(sub.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="text-right font-mono">
+                            <span className="block font-semibold text-slate-800 dark:text-slate-200">
+                              {sub.executionTimeMs != null ? `${sub.executionTimeMs}ms` : '--'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {sub.memoryUsedKb != null ? `${Math.round(sub.memoryUsedKb / 1024)}MB` : '--'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const fullRes = await api.get(`/submissions/${sub.id}`);
+                                setInspectedCode({
+                                  code: fullRes.data.data.code,
+                                  language: sub.language,
+                                  verdict: sub.verdict,
+                                  date: new Date(sub.createdAt).toLocaleString()
+                                });
+                              } catch {
+                                // fallback
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 font-semibold text-[11px] transition cursor-pointer"
+                          >
+                            Inspect Code
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Pane (Monaco Editor Workspace) */}
@@ -239,6 +371,45 @@ export function WorkspacePage() {
           />
         </div>
       </div>
+
+      {/* Code Snapshot Modal */}
+      {inspectedCode && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Code2 className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Submitted Code Snapshot ({inspectedCode.language})
+                </h3>
+                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {inspectedCode.verdict}
+                </span>
+              </div>
+              <button
+                onClick={() => setInspectedCode(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 font-mono text-xs">
+              <pre className="p-4 rounded-xl bg-slate-950 text-slate-100 whitespace-pre-wrap overflow-x-auto">
+                {inspectedCode.code}
+              </pre>
+            </div>
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
+              <span>Submitted: {inspectedCode.date}</span>
+              <button
+                onClick={() => setInspectedCode(null)}
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold cursor-pointer hover:bg-indigo-500"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
