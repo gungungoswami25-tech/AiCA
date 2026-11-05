@@ -89,7 +89,7 @@ export function Navbar() {
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <>
               {/* Landing Page Quick Navigation Anchors for Guest Visitors */}

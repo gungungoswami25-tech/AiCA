@@ -4,7 +4,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { sanitizeMongoUri } from '@aica/shared';
 import { startSubmissionWorker } from './queue/submission.worker.js';
-import { sanitizeMongoUri } from '@aica/shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
