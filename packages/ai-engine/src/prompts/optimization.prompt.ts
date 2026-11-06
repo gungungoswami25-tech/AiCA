@@ -29,5 +29,23 @@ INSTRUCTIONS:
 2. Evaluate code readability and maintainability on a scale from 1 to 10.
 3. Identify positive coding practices and code smells.
 4. Suggest 1 to 3 concrete performance or clean-code optimizations with actionable refactored snippets.
-5. Return ONLY a valid JSON object matching the requested schema.`;
+5. Return ONLY a valid JSON object matching this schema:
+{
+  "codeSummary": "Brief overview of what the student code does",
+  "timeComplexity": "e.g. O(N)",
+  "timeComplexityExplanation": "Concise mathematical proof",
+  "spaceComplexity": "e.g. O(1)",
+  "spaceComplexityExplanation": "Concise memory rationale",
+  "readabilityScore": 8, // Integer 1-10
+  "codeSmells": ["string"],
+  "positivePractices": ["string"],
+  "optimizationSuggestions": [
+    {
+      "title": "Optimization title",
+      "rationale": "Why this improves performance or maintainability",
+      "expectedTimeImpact": "e.g. Cuts constant factors",
+      "refactoredSnippet": "refactored code snippet"
+    }
+  ]
+}`;
 }

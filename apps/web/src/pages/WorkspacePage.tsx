@@ -15,10 +15,18 @@ import {
   Loader2,
   RotateCcw
 } from 'lucide-react';
-import { Problem, EvaluationReport, SolutionComparison, SupportedLanguage, LANGUAGE_CONFIGS } from '@aica/shared';
+import {
+  Problem,
+  EvaluationReport,
+  SolutionComparison,
+  MultiSolutionComparison,
+  SupportedLanguage,
+  LANGUAGE_CONFIGS
+} from '@aica/shared';
 import { MonacoWorkspace } from '../components/MonacoWorkspace';
 import { EvaluationReportView } from '../components/EvaluationReportView';
 import { SolutionComparisonView } from '../components/SolutionComparisonView';
+import { MultiSolutionComparisonView } from '../components/MultiSolutionComparisonView';
 import { api } from '../services/api';
 
 export function WorkspacePage() {
@@ -29,6 +37,8 @@ export function WorkspacePage() {
   const [activeLeftTab, setActiveLeftTab] = useState<'desc' | 'report' | 'compare' | 'submissions'>('desc');
   const [report, setReport] = useState<EvaluationReport | null>(null);
   const [comparison, setComparison] = useState<SolutionComparison | null>(null);
+  const [multiComparison, setMultiComparison] = useState<MultiSolutionComparison | null>(null);
+  const [compareViewMode, setCompareViewMode] = useState<'matrix' | 'diff'>('matrix');
   const [pastSubmissions, setPastSubmissions] = useState<any[]>([]);
   const [loadingPastSubmissions, setLoadingPastSubmissions] = useState(false);
   const [inspectedCode, setInspectedCode] = useState<{ code: string; language: string; verdict: string; date: string } | null>(null);
@@ -41,25 +51,40 @@ export function WorkspacePage() {
       if (prev.includes(subId)) {
         return prev.filter((id) => id !== subId);
       }
-      if (prev.length >= 2) {
-        return [prev[1], subId];
+      if (prev.length >= 5) {
+        return [...prev.slice(1), subId];
       }
       return [...prev, subId];
     });
   };
 
-  const handleGenerateComparison = async (idA?: string, idB?: string) => {
-    const subA = idA || selectedForCompare[0];
-    const subB = idB || selectedForCompare[1];
-    if (!subA || !subB) return;
+  const handleGenerateComparison = async (idsToCompare?: string[]) => {
+    const targetIds = idsToCompare || selectedForCompare;
+    if (targetIds.length < 2) return;
     setGeneratingComparison(true);
     try {
-      const res = await api.post('/comparisons', { submissionIdA: subA, submissionIdB: subB });
-      if (res.data?.data) {
-        setComparison(res.data.data);
-        setActiveLeftTab('compare');
-        setSelectedForCompare([]);
+      if (targetIds.length === 2 && !idsToCompare) {
+        // Can generate both 2-way Diff and Multi matrix
+        const [twoWayRes, multiRes] = await Promise.allSettled([
+          api.post('/comparisons', { submissionIdA: targetIds[0], submissionIdB: targetIds[1] }),
+          api.post('/comparisons/multi', { submissionIds: targetIds })
+        ]);
+        if (twoWayRes.status === 'fulfilled' && twoWayRes.value.data?.data) {
+          setComparison(twoWayRes.value.data.data);
+        }
+        if (multiRes.status === 'fulfilled' && multiRes.value.data?.data) {
+          setMultiComparison(multiRes.value.data.data);
+        }
+      } else {
+        // Multi-solution evolution comparison
+        const res = await api.post('/comparisons/multi', { submissionIds: targetIds });
+        if (res.data?.data) {
+          setMultiComparison(res.data.data);
+          setCompareViewMode('matrix');
+        }
       }
+      setActiveLeftTab('compare');
+      setSelectedForCompare([]);
     } catch (err: any) {
       alert(`Comparison failed: ${err.response?.data?.error?.message || err.message}`);
     } finally {
@@ -103,8 +128,30 @@ export function WorkspacePage() {
     if (!problem?.id) return;
     setLoadingPastSubmissions(true);
     try {
-      const res = await api.get(`/submissions/my?problemId=${problem.id}&limit=20`);
-      setPastSubmissions(res.data?.data?.submissions || []);
+      const [myRes, communityRes] = await Promise.allSettled([
+        api.get(`/submissions/my?problemId=${problem.id}&limit=20`),
+        api.get(`/submissions/problem/${problem.id}/solutions`)
+      ]);
+      const mySubs = myRes.status === 'fulfilled' ? myRes.value.data?.data?.submissions || [] : [];
+      const commSubs = communityRes.status === 'fulfilled' ? communityRes.value.data?.data || [] : [];
+
+      const seenIds = new Set<string>();
+      const combined: any[] = [];
+
+      for (const s of mySubs) {
+        if (!seenIds.has(s.id)) {
+          seenIds.add(s.id);
+          combined.push({ ...s, isSelf: true });
+        }
+      }
+      for (const s of commSubs) {
+        if (!seenIds.has(s.id)) {
+          seenIds.add(s.id);
+          combined.push({ ...s, isSelf: false });
+        }
+      }
+
+      setPastSubmissions(combined);
     } catch (err: any) {
       console.warn('[WorkspacePage] Submissions fetch failed:', err.message);
     } finally {
@@ -127,9 +174,17 @@ export function WorkspacePage() {
     if (!problem?.id) return;
     setActiveLeftTab('compare');
     try {
-      const res = await api.get(`/comparisons/problem/${problem.id}`);
-      if (res.data?.data) {
-        setComparison(res.data.data);
+      const [multiRes, twoWayRes] = await Promise.allSettled([
+        api.get(`/comparisons/problem/${problem.id}/multi`),
+        api.get(`/comparisons/problem/${problem.id}`)
+      ]);
+
+      if (multiRes.status === 'fulfilled' && multiRes.value.data?.data) {
+        setMultiComparison(multiRes.value.data.data);
+        setCompareViewMode('matrix');
+      }
+      if (twoWayRes.status === 'fulfilled' && twoWayRes.value.data?.data) {
+        setComparison(twoWayRes.value.data.data);
       }
     } catch {
       // Comparison not yet generated for this problem; user can select from submissions
@@ -314,20 +369,57 @@ export function WorkspacePage() {
 
           {activeLeftTab === 'compare' && (
             <div className="space-y-4">
-              {comparison ? (
+              {(multiComparison || comparison) ? (
                 <>
                   <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
-                    <span className="text-slate-600 dark:text-slate-400">Viewing comparative solution evolution</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-600 dark:text-slate-400 font-medium">Evolution Mode:</span>
+                      {multiComparison && (
+                        <button
+                          onClick={() => setCompareViewMode('matrix')}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                            compareViewMode === 'matrix'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                          }`}
+                        >
+                          Multi-Solution Matrix ({multiComparison.solutions?.length || 3})
+                        </button>
+                      )}
+                      {comparison && (
+                        <button
+                          onClick={() => setCompareViewMode('diff')}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                            compareViewMode === 'diff'
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                          }`}
+                        >
+                          Side-by-Side Diff (A vs B)
+                        </button>
+                      )}
+                    </div>
                     {pastSubmissions.length >= 2 && (
                       <button
-                        onClick={() => setComparison(null)}
+                        onClick={() => {
+                          setComparison(null);
+                          setMultiComparison(null);
+                        }}
                         className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
                       >
-                        Compare Different Submissions
+                        Reset / Select Others
                       </button>
                     )}
                   </div>
-                  <SolutionComparisonView comparison={comparison} />
+
+                  {compareViewMode === 'matrix' && multiComparison ? (
+                    <MultiSolutionComparisonView
+                      comparison={multiComparison}
+                      onSelectSolutionForEditor={(code, language) => handleLoadIntoEditor({ code, language })}
+                    />
+                  ) : comparison ? (
+                    <SolutionComparisonView comparison={comparison} />
+                  ) : null}
                 </>
               ) : (
                 <div className="p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs space-y-6">
@@ -340,7 +432,7 @@ export function WorkspacePage() {
                         Evolutionary Solution Comparison
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Contrast two different approaches to explore runtime deltas, memory differences, and AI Big-O trade-offs.
+                        Contrast multiple solutions to explore scaling deltas, memory differences, and AI Big-O trade-offs.
                       </p>
                     </div>
                   </div>
@@ -348,52 +440,53 @@ export function WorkspacePage() {
                   {pastSubmissions.length >= 2 ? (
                     <div className="space-y-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                       <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                        Select Two Submissions to Compare:
+                        Select Submissions to Compare (2 to 5):
                       </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-                        <div>
-                          <span className="block text-slate-500 mb-1 font-sans font-semibold">Approach A (Baseline):</span>
-                          <select
-                            value={selectedForCompare[0] || pastSubmissions[pastSubmissions.length - 1]?.id || ''}
-                            onChange={(e) => setSelectedForCompare([e.target.value, selectedForCompare[1] || pastSubmissions[0]?.id])}
-                            className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-                          >
-                            {pastSubmissions.map((s, idx) => (
-                              <option key={s.id} value={s.id}>
-                                #{pastSubmissions.length - idx} &bull; {s.verdict} ({s.language}) - {s.executionTimeMs}ms
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <span className="block text-slate-500 mb-1 font-sans font-semibold">Approach B (Optimized / Variation):</span>
-                          <select
-                            value={selectedForCompare[1] || pastSubmissions[0]?.id || ''}
-                            onChange={(e) => setSelectedForCompare([selectedForCompare[0] || pastSubmissions[pastSubmissions.length - 1]?.id, e.target.value])}
-                            className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-                          >
-                            {pastSubmissions.map((s, idx) => (
-                              <option key={s.id} value={s.id}>
-                                #{pastSubmissions.length - idx} &bull; {s.verdict} ({s.language}) - {s.executionTimeMs}ms
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {pastSubmissions.map((s, idx) => {
+                          const isSelected = selectedForCompare.includes(s.id);
+                          return (
+                            <div
+                              key={s.id}
+                              onClick={() => toggleCompareSelect(s.id)}
+                              className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer text-xs transition ${
+                                isSelected
+                                  ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-600 font-semibold text-indigo-900 dark:text-indigo-200'
+                                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                                  isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                }`}>
+                                  {isSelected ? '✓' : idx + 1}
+                                </span>
+                                <div>
+                                  <span className="font-bold">{s.username || 'Student'}</span> &bull;{' '}
+                                  <span className="font-mono">{s.verdict} ({s.language})</span>
+                                </div>
+                              </div>
+                              <span className="font-mono text-slate-500">{s.executionTimeMs}ms</span>
+                            </div>
+                          );
+                        })}
                       </div>
 
-                      <div className="flex justify-end pt-2">
+                      <div className="flex items-center justify-between pt-2">
+                        <span className="text-xs text-slate-500">
+                          {selectedForCompare.length} selected (min 2, max 5)
+                        </span>
                         <button
-                          onClick={() => {
-                            const idA = selectedForCompare[0] || pastSubmissions[pastSubmissions.length - 1]?.id;
-                            const idB = selectedForCompare[1] || pastSubmissions[0]?.id;
-                            handleGenerateComparison(idA, idB);
-                          }}
-                          disabled={generatingComparison}
+                          onClick={() => handleGenerateComparison()}
+                          disabled={generatingComparison || selectedForCompare.length < 2}
                           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
                         >
-                          {generatingComparison ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          Generate AI Comparison & Diff
+                          {generatingComparison ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-4 h-4" />
+                          )}
+                          Generate AI Comparison Matrix
                         </button>
                       </div>
                     </div>
@@ -404,7 +497,7 @@ export function WorkspacePage() {
                         At least two submissions required
                       </p>
                       <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                        Submit code with different algorithms (e.g. brute-force vs. two-pointer) to compare time/space trade-offs side by side.
+                        Submit code with different algorithms (e.g. brute-force vs. divide-and-conquer) to compare time/space trade-offs side by side.
                       </p>
                     </div>
                   )}
@@ -415,30 +508,49 @@ export function WorkspacePage() {
 
           {activeLeftTab === 'submissions' && (
             <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              {/* Collaborative Sorting Evolution Showcase Banner */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center justify-between flex-wrap gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                      Collaborative Multi-Solution Evolution Arena
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
+                    Compare Student A (Bubble Sort O(N²)) vs Student B (Merge Sort O(N log N)) vs Student C (Quick Sort O(N log N))
+                  </p>
+                </div>
+                <button
+                  onClick={handleCompareClick}
+                  className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                >
+                  View Evolution Matrix &rarr;
+                </button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Your Problem Submissions</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Prior sandbox kernel test runs for this problem</p>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    Collaborative Submissions & Versions
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Select 2 to 5 student solutions to generate an AI performance evolution comparison
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {selectedForCompare.length === 2 && (
+                  {selectedForCompare.length >= 2 && (
                     <button
                       onClick={() => handleGenerateComparison()}
                       disabled={generatingComparison}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-sm cursor-pointer"
                     >
-                      {generatingComparison ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeftRight className="w-3.5 h-3.5" />}
-                      Compare Selected (2)
-                    </button>
-                  )}
-                  {pastSubmissions.length >= 2 && selectedForCompare.length !== 2 && (
-                    <button
-                      onClick={() => handleGenerateComparison(pastSubmissions[pastSubmissions.length - 1].id, pastSubmissions[0].id)}
-                      disabled={generatingComparison}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition cursor-pointer"
-                    >
-                      <ArrowLeftRight className="w-3.5 h-3.5" />
-                      Quick Compare
+                      {generatingComparison ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <ArrowLeftRight className="w-3.5 h-3.5" />
+                      )}
+                      Compare Selected ({selectedForCompare.length})
                     </button>
                   )}
                   <button

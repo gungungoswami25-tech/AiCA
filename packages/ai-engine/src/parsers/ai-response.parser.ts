@@ -62,7 +62,35 @@ export const ComparisonResponseSchema = z.object({
   timeComplexityComparison: z.string(),
   spaceComplexityComparison: z.string(),
   tradeOffSummary: z.string(),
-  architecturalEvolution: z.string()
+  architecturalEvolution: z.string().default('')
+});
+
+export const MultiComparisonResponseSchema = z.object({
+  solutions: z.array(
+    z.object({
+      submissionId: z.string(),
+      algorithmName: z.string(),
+      versionLabel: z.string().optional(),
+      timeComplexity: z.string(),
+      spaceComplexity: z.string(),
+      keyStrengths: z.array(z.string()).default([]),
+      weaknessesOrBottlenecks: z.array(z.string()).default([]),
+      optimizationNotes: z.string().default('')
+    })
+  ),
+  rankings: z
+    .array(
+      z.object({
+        algorithmName: z.string(),
+        timeComplexity: z.string(),
+        spaceComplexity: z.string(),
+        rank: z.number(),
+        rationale: z.string()
+      })
+    )
+    .default([]),
+  evolutionarySynthesis: z.string(),
+  pedagogicalTakeaway: z.string()
 });
 
 export const ClarificationResponseSchema = z.object({

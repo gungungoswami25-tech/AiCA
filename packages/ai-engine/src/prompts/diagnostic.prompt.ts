@@ -32,5 +32,20 @@ INSTRUCTIONS:
 3. Provide Socratic guidance: ask a thought-provoking question to help the student debug it themselves.
 4. CRITICAL RULE: DO NOT provide the complete correct code solution. Do not leak hidden test case values.
 5. Determine the asymptotic complexity of the ATTEMPTED algorithm.
-6. Return ONLY a valid JSON object matching the requested schema.`;
+6. Return ONLY a valid JSON object matching this schema:
+{
+  "codeSummary": "Brief overview of the student code",
+  "attemptedComplexity": {
+    "timeComplexity": "e.g. O(N^2)",
+    "spaceComplexity": "e.g. O(1)",
+    "explanation": "Rationale of the attempted approach"
+  },
+  "diagnosticFeedback": {
+    "rootCauseBug": "Exact algorithmic flaw or logic bug",
+    "edgeCaseVulnerability": "Specific edge case or input condition that failed",
+    "socraticHint": "Thought-provoking pedagogical question guiding student to fix it without giving solution away"
+  },
+  "readabilityScore": 6, // Integer 1-10
+  "codeSmells": ["string"]
+}`;
 }
