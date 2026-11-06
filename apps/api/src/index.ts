@@ -28,7 +28,8 @@ const HOST = '0.0.0.0';
 // Security & Utility Middleware
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
   })
 );
 
@@ -36,24 +37,25 @@ const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',').map((u) => u.trim())
   : ['http://localhost:5173'];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (
-        allowedOrigins.includes('*') ||
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
-        origin.endsWith('.onrender.com') ||
-        origin.includes('localhost')
-      ) {
-        return callback(null, true);
-      }
-      return callback(null, true); // Permissive in production for client frontends
-    },
-    credentials: true
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com') ||
+      origin.includes('localhost')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Permissive in production for client frontends
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '64kb' })); // Max payload limit to prevent buffer overflow attacks
 
