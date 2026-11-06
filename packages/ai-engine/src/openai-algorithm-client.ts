@@ -28,7 +28,13 @@ export class OpenAIAlgorithmClient {
   private readonly apiKey?: string;
   private readonly model: string;
 
-  constructor(apiKey = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL || 'gpt-6-astra') {
+  constructor(
+    apiKey = process.env.OPENAI_API_KEY ||
+             process.env.OPENAI_KEY ||
+             process.env.OPEN_AI_KEY ||
+             process.env.OPEN_AI_API_KEY,
+    model = process.env.OPENAI_MODEL || 'gpt-6-astra'
+  ) {
     this.apiKey = apiKey?.trim();
     this.model = model;
   }

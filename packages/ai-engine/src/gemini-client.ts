@@ -461,7 +461,20 @@ export class GeminiAnalysisClient {
       });
 
       const parsed = JSON.parse(cleanJsonText(response.text));
-      return ClarificationResponseSchema.parse(parsed);
+      if (Array.isArray(parsed?.clarifications)) {
+        parsed.clarifications = parsed.clarifications.map((c: any, idx: number) => ({
+          ...c,
+          id: c.id || `clarification-${idx + 1}`
+        }));
+      }
+      const validated = ClarificationResponseSchema.parse(parsed);
+      return {
+        ...validated,
+        clarifications: validated.clarifications.map((c, idx) => ({
+          ...c,
+          id: c.id || `clarification-${idx + 1}`
+        }))
+      };
     });
   }
 

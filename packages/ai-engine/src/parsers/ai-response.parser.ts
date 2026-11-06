@@ -98,7 +98,7 @@ export const ClarificationResponseSchema = z.object({
   missingInformationSummary: z.string().optional(),
   clarifications: z.array(
     z.object({
-      id: z.string(),
+      id: z.string().optional(),
       question: z.string(),
       options: z.array(z.string()).optional()
     })
@@ -131,7 +131,7 @@ export const ProblemGenerationResponseSchema = z.object({
   }),
   testCases: z.array(
     z.object({
-      id: z.string(),
+      id: z.string().optional(),
       input: z.string(),
       expectedOutput: z.string(),
       isPublic: z.boolean().default(false),
