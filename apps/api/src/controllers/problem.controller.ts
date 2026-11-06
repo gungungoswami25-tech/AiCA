@@ -166,7 +166,7 @@ export async function getProblemById(req: Request, res: Response): Promise<void>
     const problem: any = await ProblemModel.findOne(query).lean();
 
     const isStaff = req.user?.role === 'ADMIN' || req.user?.role === 'INSTRUCTOR';
-    if (!problem || (problem.status !== 'PUBLISHED' && !isStaff)) {
+    if (!problem || (problem.status && problem.status !== 'PUBLISHED' && !isStaff)) {
       res.status(404).json(createErrorResponse('NOT_FOUND', 'Problem not found or unpublished'));
       return;
     }

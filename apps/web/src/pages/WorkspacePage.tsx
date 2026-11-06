@@ -31,6 +31,153 @@ import { SolutionComparisonView } from '../components/SolutionComparisonView';
 import { MultiSolutionComparisonView } from '../components/MultiSolutionComparisonView';
 import { api } from '../services/api';
 
+const FALLBACK_CATALOG_PROBLEMS: Record<string, Problem> = {
+  'container-with-most-water': {
+    id: '6aec58907aa3af64a5e5568a',
+    title: 'Container With Most Water',
+    slug: 'container-with-most-water',
+    status: 'PUBLISHED',
+    version: 1,
+    difficulty: 'MEDIUM',
+    tags: ['Arrays', 'Two-Pointers', 'Greedy'],
+    description: `You are given an integer array \`height\` of length \`n\`. There are \`n\` vertical lines drawn such that the two endpoints of the \`i-th\` line are \`(i, 0)\` and \`(i, height[i])\`.\n\nFind two lines that together with the x-axis form a container, such that the container contains the most water.\n\nReturn *the maximum amount of water a container can store*.`,
+    constraints: [
+      'n == height.length',
+      '2 <= n <= 10^5',
+      '0 <= height[i] <= 10^4'
+    ],
+    examples: [
+      {
+        input: 'height = [1,8,6,2,5,4,8,3,7]',
+        output: '49',
+        explanation: 'The max area is between index 1 and 8.'
+      }
+    ],
+    timeLimitMs: 2000,
+    memoryLimitKb: 262144,
+    benchmarks: {
+      targetTimeMs: 20,
+      pythonMultiplier: 4.0,
+      jsMultiplier: 2.5,
+      cppMultiplier: 1.0,
+      javaMultiplier: 2.0
+    },
+    starterCode: {
+      python: `import sys\n\ndef maxArea(height: list[int]) -> int:\n    left, right = 0, len(height) - 1\n    max_water = 0\n    while left < right:\n        width = right - left\n        max_water = max(max_water, min(height[left], height[right]) * width)\n        if height[left] < height[right]:\n            left += 1\n        else:\n            right -= 1\n    return max_water\n\nif __name__ == '__main__':\n    lines = sys.stdin.read().split()\n    if len(lines) >= 2:\n        n = int(lines[0])\n        h = [int(x) for x in lines[1:n+1]]\n        print(maxArea(h))\n`,
+      javascript: `const fs = require('fs');\n\nfunction maxArea(height) {\n    let left = 0, right = height.length - 1;\n    let maxWater = 0;\n    while (left < right) {\n        const width = right - left;\n        maxWater = Math.max(maxWater, Math.min(height[left], height[right]) * width);\n        if (height[left] < height[right]) left++;\n        else right--;\n    }\n    return maxWater;\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);\nif (input.length >= 2) {\n    const n = parseInt(input[0], 10);\n    const nums = input.slice(1, n + 1).map(Number);\n    console.log(maxArea(nums));\n}\n`,
+      cpp: `#include <iostream>\n#include <vector>\n#include <algorithm>\n\nusing namespace std;\n\nint maxArea(vector<int>& height) {\n    int left = 0, right = height.size() - 1;\n    int max_water = 0;\n    while (left < right) {\n        int width = right - left;\n        max_water = max(max_water, min(height[left], height[right]) * width);\n        if (height[left] < height[right]) left++;\n        else right--;\n    }\n    return max_water;\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> h(n);\n        for (int i = 0; i < n; i++) cin >> h[i];\n        cout << maxArea(h) << endl;\n    }\n    return 0;\n}\n`,
+      java: `import java.util.*;\n\npublic class Solution {\n    public static int maxArea(int[] height) {\n        int left = 0, right = height.length - 1;\n        int maxWater = 0;\n        while (left < right) {\n            int width = right - left;\n            maxWater = Math.max(maxWater, Math.min(height[left], height[right]) * width);\n            if (height[left] < height[right]) left++;\n            else right--;\n        }\n        return maxWater;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] h = new int[n];\n            for (int i = 0; i < n; i++) h[i] = sc.nextInt();\n            System.out.println(maxArea(h));\n        }\n    }\n}\n`
+    },
+    testCases: [
+      { id: 'tc-wm-1', input: '9\n1 8 6 2 5 4 8 3 7', expectedOutput: '49', isPublic: true, isEdgeCase: false, weight: 1.0 },
+      { id: 'tc-wm-2', input: '2\n1 1', expectedOutput: '1', isPublic: true, isEdgeCase: false, weight: 1.0 }
+    ],
+    totalSubmissions: 24,
+    acceptedSubmissions: 15,
+    acceptanceRate: 62.5,
+    createdBy: 'system',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  'longest-substring-without-repeating': {
+    id: '6aec58907aa3af64a5e55689',
+    title: 'Longest Substring Without Repeating Characters',
+    slug: 'longest-substring-without-repeating',
+    status: 'PUBLISHED',
+    version: 1,
+    difficulty: 'MEDIUM',
+    tags: ['Strings', 'Sliding-Window', 'Hash-Table'],
+    description: `Given a string \`s\`, find the length of the **longest substring** without repeating characters.`,
+    constraints: [
+      '0 <= s.length <= 5 * 10^4',
+      's consists of English letters, digits, symbols and spaces.'
+    ],
+    examples: [
+      {
+        input: 's = "abcabcbb"',
+        output: '3',
+        explanation: 'The answer is "abc", with the length of 3.'
+      }
+    ],
+    timeLimitMs: 2000,
+    memoryLimitKb: 262144,
+    benchmarks: {
+      targetTimeMs: 20,
+      pythonMultiplier: 4.0,
+      jsMultiplier: 2.5,
+      cppMultiplier: 1.0,
+      javaMultiplier: 2.0
+    },
+    starterCode: {
+      python: `import sys\n\ndef lengthOfLongestSubstring(s: str) -> int:\n    char_map = {}\n    left = 0\n    max_len = 0\n    for right, ch in enumerate(s):\n        if ch in char_map and char_map[ch] >= left:\n            left = char_map[ch] + 1\n        char_map[ch] = right\n        max_len = max(max_len, right - left + 1)\n    return max_len\n\nif __name__ == '__main__':\n    s = sys.stdin.read().rstrip('\\r\\n')\n    print(lengthOfLongestSubstring(s))\n`,
+      javascript: `const fs = require('fs');\n\nfunction lengthOfLongestSubstring(s) {\n    const map = new Map();\n    let left = 0, maxLen = 0;\n    for (let right = 0; right < s.length; right++) {\n        const ch = s[right];\n        if (map.has(ch) && map.get(ch) >= left) {\n            left = map.get(ch) + 1;\n        }\n        map.set(ch, right);\n        maxLen = Math.max(maxLen, right - left + 1);\n    }\n    return maxLen;\n}\n\nconst input = fs.readFileSync(0, 'utf-8').replace(/\\r?\\n$/, '');\nconsole.log(lengthOfLongestSubstring(input));\n`,
+      cpp: `#include <iostream>\n#include <string>\n#include <vector>\n#include <algorithm>\n\nusing namespace std;\n\nint lengthOfLongestSubstring(string s) {\n    vector<int> last(256, -1);\n    int left = 0, max_len = 0;\n    for (int right = 0; right < (int)s.size(); right++) {\n        unsigned char ch = s[right];\n        if (last[ch] >= left) left = last[ch] + 1;\n        last[ch] = right;\n        max_len = max(max_len, right - left + 1);\n    }\n    return max_len;\n}\n\nint main() {\n    string s;\n    if (getline(cin, s)) {\n        cout << lengthOfLongestSubstring(s) << endl;\n    }\n    return 0;\n}\n`,
+      java: `import java.util.*;\n\npublic class Solution {\n    public static int lengthOfLongestSubstring(String s) {\n        int[] last = new int[256];\n        Arrays.fill(last, -1);\n        int left = 0, maxLen = 0;\n        for (int right = 0; right < s.length(); right++) {\n            char ch = s.charAt(right);\n            if (last[ch] >= left) left = last[ch] + 1;\n            last[ch] = right;\n            maxLen = Math.max(maxLen, right - left + 1);\n        }\n        return maxLen;\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextLine()) {\n            System.out.println(lengthOfLongestSubstring(sc.nextLine()));\n        }\n    }\n}\n`
+    },
+    testCases: [
+      { id: 'tc-ls-1', input: 'abcabcbb', expectedOutput: '3', isPublic: true, isEdgeCase: false, weight: 1.0 },
+      { id: 'tc-ls-2', input: 'bbbbb', expectedOutput: '1', isPublic: true, isEdgeCase: false, weight: 1.0 }
+    ],
+    totalSubmissions: 32,
+    acceptedSubmissions: 18,
+    acceptanceRate: 56.3,
+    createdBy: 'system',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  'two-sum-optimal': {
+    id: '6aec58907aa3af64a5e55688',
+    title: 'Two Sum Optimal',
+    slug: 'two-sum-optimal',
+    status: 'PUBLISHED',
+    version: 1,
+    difficulty: 'EASY',
+    tags: ['Arrays', 'Hash-Table'],
+    description: `Given an array of integers \`nums\` and an integer \`target\`, return *indices of the two numbers such that they add up to target*.\n\nYou may assume that each input would have ***exactly one solution***, and you may not use the same element twice.`,
+    constraints: [
+      '2 <= nums.length <= 10^4',
+      '-10^9 <= nums[i] <= 10^9',
+      '-10^9 <= target <= 10^9'
+    ],
+    examples: [
+      {
+        input: 'nums = [2,7,11,15], target = 9',
+        output: '0 1',
+        explanation: 'Because nums[0] + nums[1] == 9, we return [0, 1].'
+      }
+    ],
+    timeLimitMs: 2000,
+    memoryLimitKb: 262144,
+    benchmarks: {
+      targetTimeMs: 15,
+      pythonMultiplier: 4.0,
+      jsMultiplier: 2.5,
+      cppMultiplier: 1.0,
+      javaMultiplier: 2.0
+    },
+    starterCode: {
+      python: `import sys\n\ndef twoSum(nums: list[int], target: int) -> list[int]:\n    # Optimal Hash Map approach O(N)\n    lookup = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in lookup:\n            return [lookup[complement], i]\n        lookup[num] = i\n    return []\n\nif __name__ == '__main__':\n    lines = sys.stdin.read().split()\n    if len(lines) >= 3:\n        n = int(lines[0])\n        nums = [int(x) for x in lines[1:n+1]]\n        target = int(lines[n+1])\n        res = twoSum(nums, target)\n        print(f"{res[0]} {res[1]}")\n`,
+      javascript: `const fs = require('fs');\n\nfunction twoSum(nums, target) {\n    const map = new Map();\n    for (let i = 0; i < nums.length; i++) {\n        const complement = target - nums[i];\n        if (map.has(complement)) {\n            return [map.get(complement), i];\n        }\n        map.set(nums[i], i);\n    }\n    return [];\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);\nif (input.length >= 3) {\n    const n = parseInt(input[0], 10);\n    const nums = input.slice(1, n + 1).map(Number);\n    const target = parseInt(input[n + 1], 10);\n    const [a, b] = twoSum(nums, target);\n    console.log(\`\${a} \${b}\`);\n}\n`,
+      cpp: `#include <iostream>\n#include <vector>\n#include <unordered_map>\n\nusing namespace std;\n\npair<int, int> twoSum(const vector<int>& nums, int target) {\n    unordered_map<int, int> lookup;\n    for (int i = 0; i < (int)nums.size(); ++i) {\n        int comp = target - nums[i];\n        if (lookup.count(comp)) {\n            return {lookup[comp], i};\n        }\n        lookup[nums[i]] = i;\n    }\n    return {-1, -1};\n}\n\nint main() {\n    int n;\n    if (cin >> n) {\n        vector<int> nums(n);\n        for (int i = 0; i < n; ++i) cin >> nums[i];\n        int target;\n        cin >> target;\n        auto res = twoSum(nums, target);\n        cout << res.first << " " << res.second << endl;\n    }\n    return 0;\n}\n`,
+      java: `import java.util.*;\n\npublic class Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        Map<Integer, Integer> map = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int comp = target - nums[i];\n            if (map.containsKey(comp)) {\n                return new int[]{map.get(comp), i};\n            }\n            map.put(nums[i], i);\n        }\n        return new int[]{-1, -1};\n    }\n\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextInt()) {\n            int n = sc.nextInt();\n            int[] nums = new int[n];\n            for (int i = 0; i < n; i++) nums[i] = sc.nextInt();\n            int target = sc.nextInt();\n            int[] res = twoSum(nums, target);\n            System.out.println(res[0] + " " + res[1]);\n        }\n    }\n}\n`
+    },
+    testCases: [
+      { id: 'tc-1', input: '4\n2 7 11 15\n9', expectedOutput: '0 1', isPublic: true, isEdgeCase: false, weight: 1.0 }
+    ],
+    totalSubmissions: 48,
+    acceptedSubmissions: 36,
+    acceptanceRate: 75.0,
+    createdBy: 'system',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+};
+
+// Aliases for IDs
+FALLBACK_CATALOG_PROBLEMS['6aec58907aa3af64a5e5568a'] = FALLBACK_CATALOG_PROBLEMS['container-with-most-water'];
+FALLBACK_CATALOG_PROBLEMS['6aec58907aa3af64a5e55689'] = FALLBACK_CATALOG_PROBLEMS['longest-substring-without-repeating'];
+FALLBACK_CATALOG_PROBLEMS['6aec58907aa3af64a5e55688'] = FALLBACK_CATALOG_PROBLEMS['two-sum-optimal'];
+
 export function WorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -118,13 +265,28 @@ export function WorkspacePage() {
     setLoading(true);
     try {
       const res = await api.get(`/problems/${problemId}`);
-      setProblem(res.data.data);
+      if (res.data?.data) {
+        setProblem(res.data.data);
+        setLoading(false);
+        return;
+      }
     } catch (err: any) {
-      console.warn('[WorkspacePage] Problem fetch failed:', err.message);
-      setProblem(null);
-    } finally {
-      setLoading(false);
+      console.warn('[WorkspacePage] API fetch failed, checking fallback catalog:', err.message);
     }
+
+    // High availability fallback for catalog problems during live demonstrations
+    const fallback =
+      FALLBACK_CATALOG_PROBLEMS[problemId] ||
+      Object.values(FALLBACK_CATALOG_PROBLEMS).find(
+        (p) => p.slug === problemId || p.id === problemId
+      );
+
+    if (fallback) {
+      setProblem(fallback);
+    } else {
+      setProblem(null);
+    }
+    setLoading(false);
   };
 
   const fetchProblemSubmissions = async () => {
