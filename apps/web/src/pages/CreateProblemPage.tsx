@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  Sparkles,
+  Bot,
   CheckCircle2,
   AlertCircle,
   HelpCircle,
@@ -215,21 +215,19 @@ export function CreateProblemPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
       {/* Header Banner */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            AI Evolution Lab Pipeline
+            <Bot className="w-3.5 h-3.5 text-emerald-600" />
+            AI Pipeline
           </span>
           <span className="text-xs font-mono text-slate-400">Differential Verification 2.0</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
           AI Problem Creator & Validator
         </h1>
-        <p className="mt-1 text-sm text-slate-600 max-w-3xl">
-          Describe any programming scenario in plain English. Our pipeline verifies requirements,
-          synthesizes competitive programming specifications, drafts dual reference oracles, and validates
-          100% output concordance inside isolated Judge0 CE Linux sandboxes.
+        <p className="mt-1 text-xs sm:text-sm text-slate-600">
+          Enter a problem scenario to automatically synthesize specifications and dual-validated test suites.
         </p>
       </div>
 
@@ -296,7 +294,7 @@ export function CreateProblemPage() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <Bot className="w-4 h-4 text-emerald-400" />
                     Formulate &amp; Validate with AI
                   </>
                 )}

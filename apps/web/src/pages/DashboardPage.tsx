@@ -11,7 +11,6 @@ import {
   User as UserIcon,
   Zap,
   Clock,
-  Sparkles,
   ExternalLink,
   Loader2
 } from 'lucide-react';
@@ -80,36 +79,36 @@ export function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Welcome Banner */}
-      <div className="p-8 rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 shadow-xl text-white relative overflow-hidden">
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 shadow-xl text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-semibold">
+        <div className="relative z-10 space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            GV2 Student Dashboard
+            Student Dashboard
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Welcome back, {profile?.fullName || user?.username || 'Algorithmic Explorer'}!
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+            Welcome back, {profile?.fullName || user?.username || 'Student'}!
           </h1>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-xl font-normal leading-relaxed">
-            Monitor real-time sandbox executions, review Gemini AST evolutionary diffs, and inspect your algorithmic speedup metrics.
+          <p className="text-xs text-slate-300 font-normal">
+            Track real-time sandbox executions and algorithmic speedup metrics.
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap items-center gap-3 self-start sm:self-auto">
+        <div className="relative z-10 flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <Link
             to="/profile"
-            className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-xs transition flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-xs transition flex items-center gap-1.5"
           >
-            <UserIcon className="w-4 h-4 text-emerald-400" />
-            View Full Profile
+            <UserIcon className="w-3.5 h-3.5 text-emerald-400" />
+            Profile
           </Link>
           <Link
             to="/problems"
-            className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 transition flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5"
           >
             Solve Problems
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </div>

@@ -4,7 +4,6 @@ import {
   Play,
   Send,
   RotateCcw,
-  Sparkles,
   CheckCircle2,
   XCircle,
   Clock,

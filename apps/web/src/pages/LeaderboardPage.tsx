@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Globe, Flame, CheckCircle2, Clock, User as UserIcon, Loader2, Sparkles } from 'lucide-react';
+import { Trophy, Globe, Flame, CheckCircle2, Clock, User as UserIcon, Loader2 } from 'lucide-react';
 import { LeaderboardEntry, GlobalLeaderboardEntry } from '@aica/shared';
 import { LeaderboardView } from '../components/LeaderboardView';
 import { api } from '../services/api';
@@ -77,15 +77,12 @@ export function LeaderboardPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       {/* Header and Toggle Controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-amber-500 dark:text-amber-400" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 dark:text-amber-400" />
             Platform Leaderboards
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Transparent composite scoring based on execution runtime, auxiliary memory, and AI code quality.
-          </p>
         </div>
 
         {/* Tab Switcher */}

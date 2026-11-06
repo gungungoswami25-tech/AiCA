@@ -17,7 +17,7 @@ import { CreateProblemPage } from './pages/CreateProblemPage';
 import { AdminProblemReviewPage } from './pages/AdminProblemReviewPage';
 import { AdminProblemManagementPage } from './pages/AdminProblemManagementPage';
 import { useAuthStore } from './store/useAuthStore';
-import { Sparkles, ArrowRight, Cpu, ArrowLeftRight, Menu } from 'lucide-react';
+import { ArrowRight, Cpu, ArrowLeftRight, Menu } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
