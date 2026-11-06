@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Plus,
@@ -87,6 +87,7 @@ const DEFAULT_FORM_DATA: ProblemFormData = {
 export function AdminProblemManagementPage() {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [problems, setProblems] = useState<AdminProblemItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +104,12 @@ export function AdminProblemManagementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleOpenCreateModal();
+    }
+  }, [searchParams]);
 
   // Staff Authorization Check
   useEffect(() => {
@@ -303,18 +310,25 @@ export function AdminProblemManagementPage() {
 
         <div className="flex items-center gap-3">
           <Link
-            to="/admin/proposals"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs transition"
+            to="/create-problem"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-xs font-semibold hover:bg-purple-100 dark:hover:bg-purple-900/40 shadow-xs transition"
           >
-            <Sparkles className="w-4 h-4 text-emerald-500" />
-            AI Proposal Review
+            <Sparkles className="w-4 h-4 text-purple-500" />
+            AI Generator
+          </Link>
+          <Link
+            to="/admin/proposals"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs transition"
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            AI Review Queue
           </Link>
           <button
             onClick={handleOpenCreateModal}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            New Problem
+            + New Problem
           </button>
         </div>
       </div>

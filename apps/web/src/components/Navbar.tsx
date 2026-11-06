@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow, Sparkles, ShieldCheck } from 'lucide-react';
+import { Trophy, BarChart2, BookOpen, LogOut, User as UserIcon, Workflow, Sparkles, ShieldCheck, PlusCircle } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -66,13 +66,24 @@ export function Navbar() {
                 Dashboard
               </Link>
               {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
-                <Link
-                  to="/admin/problems"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs sm:text-sm font-semibold transition"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  Manage Problems
-                </Link>
+                <>
+                  <Link
+                    to="/admin/problems?create=true"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs sm:text-sm font-semibold border border-purple-200/60 dark:border-purple-800 transition"
+                    title="Create a New Algorithmic Question"
+                  >
+                    <PlusCircle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    Create Question
+                  </Link>
+                  <Link
+                    to="/admin/problems"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs sm:text-sm font-semibold transition"
+                    title="Manage Problem Catalog & Curriculum"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Manage Catalog
+                  </Link>
+                </>
               )}
 
               <ThemeToggle className="ml-1" />

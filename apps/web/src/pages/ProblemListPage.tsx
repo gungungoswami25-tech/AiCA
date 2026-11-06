@@ -14,10 +14,12 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle2,
-  Clock
+  Clock,
+  Plus
 } from 'lucide-react';
 import { ProblemListItem, ProblemDifficulty, ProblemSortOption } from '@aica/shared';
 import { api } from '../services/api';
+import { useAuthStore } from '../store/useAuthStore';
 
 const TOPIC_TAGS = [
   'All Topics',
@@ -38,6 +40,7 @@ const SORT_OPTIONS: { label: string; value: ProblemSortOption }[] = [
 ];
 
 export function ProblemListPage() {
+  const { user } = useAuthStore();
   const [problems, setProblems] = useState<ProblemListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,24 +156,45 @@ export function ProblemListPage() {
           </p>
         </div>
 
-        {/* Difficulty Selector */}
-        <div className="flex items-center gap-2">
-          {['ALL', 'EASY', 'MEDIUM', 'HARD'].map((d) => (
-            <button
-              key={d}
-              onClick={() => {
-                setDifficulty(d);
-                setPage(1);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                difficulty === d
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shadow-xs'
-              }`}
-            >
-              {d === 'ALL' ? 'All Difficulties' : d.charAt(0) + d.slice(1).toLowerCase()}
-            </button>
-          ))}
+        {/* Action Buttons & Difficulty Selector */}
+        <div className="flex flex-wrap items-center gap-3">
+          {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/admin/problems?create=true"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                Create Question
+              </Link>
+              <Link
+                to="/create-problem"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-xs font-semibold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                AI Generator
+              </Link>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            {['ALL', 'EASY', 'MEDIUM', 'HARD'].map((d) => (
+              <button
+                key={d}
+                onClick={() => {
+                  setDifficulty(d);
+                  setPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                  difficulty === d
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shadow-xs'
+                }`}
+              >
+                {d === 'ALL' ? 'All Difficulties' : d.charAt(0) + d.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
