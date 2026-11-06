@@ -4,7 +4,7 @@ import {
   XCircle,
   Clock,
   Cpu,
-  Sparkles,
+  Brain,
   Zap,
   HelpCircle,
   Code,
@@ -139,23 +139,23 @@ export function EvaluationReportView({
           <span className="text-[11px] text-slate-500 dark:text-slate-400">{report.metrics?.rawMemoryKb} KB</span>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+            <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             Theoretical Time
           </span>
-          <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-300">
+          <div className="text-lg sm:text-xl font-bold font-mono text-amber-600 dark:text-amber-300">
             {ai?.theoreticalComplexity?.timeComplexity || 'O(N)'}
           </div>
           <span className="text-[11px] text-slate-500 dark:text-slate-400">Asymptotic Big-O</span>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mb-1">
-            <Zap className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+            <Zap className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
             Code Quality
           </span>
-          <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-300">
+          <div className="text-lg sm:text-xl font-bold font-mono text-emerald-600 dark:text-emerald-300">
             {ai?.codeQuality?.score || 8.0} <span className="text-xs text-slate-400 dark:text-slate-500 font-sans">/ 10</span>
           </div>
           <span className="text-[11px] text-slate-500 dark:text-slate-400">Static Readability</span>
@@ -163,16 +163,16 @@ export function EvaluationReportView({
       </div>
 
       {/* AI Pedagogical Analysis Card */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20">
-              <Sparkles className="w-5 h-5" />
+      <div className="p-4 sm:p-6 rounded-2xl bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20">
+              <Brain className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">AI Code Evolution & Complexity Insights</h3>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Evaluated via Google Gemini 1.5 &bull; {ai?.mode === 'OPTIMIZATION' ? 'Optimization Mode' : 'Diagnostic Mode'}
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">Complexity & Evolution Insights</h3>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Google Gemini Engine &bull; {ai?.mode === 'OPTIMIZATION' ? 'Optimization Mode' : 'Diagnostic Mode'}
               </span>
             </div>
           </div>

@@ -4,7 +4,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Cpu,
-  Sparkles,
+  Brain,
   Zap,
   BarChart3,
   Layers,
@@ -20,8 +20,7 @@ import {
   Activity,
   Terminal,
   Lock,
-  Workflow,
-  Sparkle
+  Workflow
 } from 'lucide-react';
 
 interface CodeSample {
@@ -379,8 +378,8 @@ export function HeroLandingPage() {
             <span>Judge0 Linux cgroups</span>
           </div>
           <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-amber-300 dark:hover:border-amber-500 hover:shadow-xs transition">
-            <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span>Gemini 1.5 Dual-Mode</span>
+            <Brain className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>Gemini Dual-Mode AI</span>
           </div>
           <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/90 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-xs transition">
             <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
@@ -635,8 +634,8 @@ export function HeroLandingPage() {
                   {/* Gemini 1.5 Pedagogical Explanation */}
                   <div className="p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100/90 dark:border-indigo-900/60 space-y-1.5 shadow-xs">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950 dark:text-indigo-200">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                      Gemini 1.5 Pedagogical Insights
+                      <Brain className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      Pedagogical Insights
                     </div>
                     <p className="text-xs text-indigo-950/80 dark:text-indigo-200/80 leading-relaxed font-sans">
                       {currentSample.aiExplanation}
@@ -730,7 +729,7 @@ export function HeroLandingPage() {
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-mono text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
+              <Zap className="w-3 h-3" />
               Pedagogical reasoning
             </div>
           </div>
@@ -790,10 +789,10 @@ export function HeroLandingPage() {
           </div>
 
           {/* Card 2 */}
-          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-amber-200 dark:hover:border-amber-800 transition-all duration-200 flex flex-col justify-between">
+          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-amber-200 dark:border-amber-800 transition-all duration-200 flex flex-col justify-between">
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <Sparkles className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-800/60 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <Brain className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 Dual-Mode AI Telemetry

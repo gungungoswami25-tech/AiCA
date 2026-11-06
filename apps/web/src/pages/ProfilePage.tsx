@@ -16,7 +16,6 @@ import {
   Edit3,
   Share2,
   Code2,
-  Sparkles,
   Trophy,
   Layers,
   ChevronRight,

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
-  Sparkles,
+  FileText,
+  BarChart2,
+  Workflow,
   ArrowLeftRight,
   ChevronLeft,
   ShieldCheck,
@@ -45,6 +47,7 @@ export function WorkspacePage() {
   const [loadedCode, setLoadedCode] = useState<{ code: string; language: SupportedLanguage } | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
   const [generatingComparison, setGeneratingComparison] = useState(false);
+  const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<'problem' | 'editor'>('editor');
 
   const toggleCompareSelect = (subId: string) => {
     setSelectedForCompare((prev) => {
@@ -215,27 +218,55 @@ export function WorkspacePage() {
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
       {/* Workspace Subheader */}
-      <div className="px-6 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      {/* Top Breadcrumb Bar & View Tabs */}
+      <div className="px-4 sm:px-6 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <Link
             to="/problems"
             className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3.5 h-3.5" />
             Problems
           </Link>
           <span className="text-slate-400 dark:text-slate-600">/</span>
           <h1 className="text-sm font-bold text-slate-900 dark:text-slate-200">{problem.title}</h1>
-          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
             {problem.difficulty}
           </span>
+
+          {/* Mobile Screen Pane Switcher (lg:hidden) */}
+          <div className="flex lg:hidden items-center ml-auto bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs">
+            <button
+              onClick={() => setMobileWorkspaceTab('problem')}
+              className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                mobileWorkspaceTab === 'problem'
+                  ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'text-slate-500'
+              }`}
+            >
+              Details
+            </button>
+            <button
+              onClick={() => setMobileWorkspaceTab('editor')}
+              className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                mobileWorkspaceTab === 'editor'
+                  ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'text-slate-500'
+              }`}
+            >
+              Editor
+            </button>
+          </div>
         </div>
 
         {/* Tab Switcher for Left Panel */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold overflow-x-auto scrollbar-none">
           <button
-            onClick={() => setActiveLeftTab('desc')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+            onClick={() => {
+              setActiveLeftTab('desc');
+              setMobileWorkspaceTab('problem');
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
               activeLeftTab === 'desc'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -245,36 +276,41 @@ export function WorkspacePage() {
             Description
           </button>
           <button
-            onClick={() => setActiveLeftTab('report')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+            onClick={() => {
+              setActiveLeftTab('report');
+              setMobileWorkspaceTab('problem');
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
               activeLeftTab === 'report'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            Evaluation Report {report ? '✓' : ''}
+            <FileText className="w-3.5 h-3.5" />
+            Report {report ? '✓' : ''}
           </button>
           <button
             onClick={() => {
               if (!comparison) handleCompareClick();
               setActiveLeftTab('compare');
+              setMobileWorkspaceTab('problem');
             }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
               activeLeftTab === 'compare'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <ArrowLeftRight className="w-3.5 h-3.5" />
-            Compare Solutions
+            Compare
           </button>
           <button
             onClick={() => {
               fetchProblemSubmissions();
               setActiveLeftTab('submissions');
+              setMobileWorkspaceTab('problem');
             }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition whitespace-nowrap ${
               activeLeftTab === 'submissions'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -287,9 +323,9 @@ export function WorkspacePage() {
       </div>
 
       {/* Main Dual-Pane Canvas */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 overflow-hidden bg-slate-100/60 dark:bg-slate-950">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-3 sm:p-4 overflow-hidden bg-slate-100/60 dark:bg-slate-950">
         {/* Left Pane (Description / Report / Comparison) */}
-        <div className="h-full overflow-y-auto pr-2">
+        <div className={`${mobileWorkspaceTab === 'problem' ? 'block' : 'hidden'} lg:block h-full overflow-y-auto pr-0 lg:pr-2`}>
           {activeLeftTab === 'desc' && (
             <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-6 shadow-xs">
               <div>
@@ -479,25 +515,25 @@ export function WorkspacePage() {
                         <button
                           onClick={() => handleGenerateComparison()}
                           disabled={generatingComparison || selectedForCompare.length < 2}
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50"
                         >
                           {generatingComparison ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            <Sparkles className="w-4 h-4" />
+                            <BarChart2 className="w-3.5 h-3.5" />
                           )}
-                          Generate AI Comparison Matrix
+                          Generate Comparison Matrix
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="py-8 text-center text-slate-500 space-y-2 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                      <Clock className="w-6 h-6 text-slate-400 mx-auto" />
+                    <div className="py-6 text-center text-slate-500 space-y-1.5 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                      <Clock className="w-5 h-5 text-slate-400 mx-auto" />
                       <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         At least two submissions required
                       </p>
                       <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                        Submit code with different algorithms (e.g. brute-force vs. divide-and-conquer) to compare time/space trade-offs side by side.
+                        Submit code with different algorithms to compare time/space trade-offs.
                       </p>
                     </div>
                   )}
@@ -507,18 +543,18 @@ export function WorkspacePage() {
           )}
 
           {activeLeftTab === 'submissions' && (
-            <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs">
+            <div className="p-4 sm:p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs">
               {/* Collaborative Sorting Evolution Showcase Banner */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center justify-between flex-wrap gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center justify-between flex-wrap gap-2.5">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <Workflow className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                     <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                      Collaborative Multi-Solution Evolution Arena
+                      Multi-Solution Evolution Arena
                     </span>
                   </div>
                   <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
-                    Compare Student A (Bubble Sort O(N²)) vs Student B (Merge Sort O(N log N)) vs Student C (Quick Sort O(N log N))
+                    Compare Student A (Bubble O(N²)) vs B (Merge O(N log N)) vs C (Quick O(N log N))
                   </p>
                 </div>
                 <button
@@ -652,7 +688,7 @@ export function WorkspacePage() {
         </div>
 
         {/* Right Pane (Monaco Editor Workspace) */}
-        <div className="h-full">
+        <div className={`${mobileWorkspaceTab === 'editor' ? 'block' : 'hidden'} lg:block h-full`}>
           <MonacoWorkspace
             problem={problem}
             onEvaluationComplete={handleEvaluationComplete}

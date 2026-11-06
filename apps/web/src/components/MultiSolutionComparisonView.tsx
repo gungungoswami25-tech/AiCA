@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Sparkles,
+  Brain,
   Clock,
   Cpu,
   Zap,
@@ -102,13 +102,10 @@ export function MultiSolutionComparisonView({
       </div>
 
       {/* Controlled Sandbox Notice */}
-      <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 text-xs text-indigo-800 dark:text-indigo-300 flex items-start gap-2.5">
-        <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-        <p className="leading-relaxed">
-          <strong className="font-semibold">Theoretical vs. Empirical Note:</strong> Asymptotic Big-O
-          time and space complexity are mathematical bounds. The execution time and memory usage shown
-          below were measured separately using our isolated, controlled Linux sandbox execution
-          environment.
+      <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 text-xs text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
+        <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+        <p className="leading-normal">
+          Measured in isolated Linux sandbox. Big-O indicates theoretical algorithmic bounds.
         </p>
       </div>
 
@@ -346,10 +343,10 @@ export function MultiSolutionComparisonView({
       </div>
 
       {/* AI Evolutionary Synthesis & Pedagogical Takeaway */}
-      <div className="p-6 rounded-2xl bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center gap-2.5 text-indigo-600 dark:text-indigo-400 font-bold text-sm">
-          <Sparkles className="w-5 h-5 text-indigo-500" />
-          AI Evolutionary Synthesis & Performance Scaling Analysis
+      <div className="p-5 rounded-2xl bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs sm:text-sm">
+          <Brain className="w-4 h-4 text-indigo-500" />
+          Evolutionary Synthesis & Scaling Analysis
         </div>
 
         <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans whitespace-pre-line">
@@ -357,8 +354,8 @@ export function MultiSolutionComparisonView({
         </p>
 
         {matrixComparison?.pedagogicalTakeaway && (
-          <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 flex items-start gap-3">
-            <Award className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 flex items-start gap-2.5">
+            <Award className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
             <div>
               <h5 className="text-xs font-bold text-indigo-900 dark:text-indigo-200 mb-0.5">
                 Key Pedagogical Takeaway

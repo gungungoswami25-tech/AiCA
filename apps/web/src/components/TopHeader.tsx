@@ -9,7 +9,6 @@ import {
   Sun,
   Moon,
   ChevronDown,
-  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useThemeStore } from '../store/useThemeStore';
